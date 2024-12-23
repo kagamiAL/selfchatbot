@@ -1,12 +1,6 @@
-from setuptools import setup, find_packages
+#!/usr/bin/env python
 
-setup(
-    name="SelfChatBot",
-    version="0.1",
-    packages=find_packages(),
-    entry_points={
-        "console_scripts": [
-            "selfChatBot_preprocess=DataProcessing.preprocess_data:main",
-        ],
-    },
-)
+import setuptools
+
+if __name__ == "__main__":
+    setuptools.setup()

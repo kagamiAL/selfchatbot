@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "SelfChatBot"
+version = "0.1.0"
+description = "A chatbot project where you can talk to yourself"
+authors = [{ name = "Alan Bach", email = "bachalan330@gmail.com" }]
+readme = "README.md"
+license = { text = "MIT" }
+dependencies = [
+    "torch",  # Latest version
+    "transformers",  # Latest version
+    "emoji"  # Latest version
+]
+requires-python = ">=3.12"
+
+[project.scripts]
+selfChatBot_preprocess = "DataProcessing.preprocess_data:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
