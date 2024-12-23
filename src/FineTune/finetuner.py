@@ -122,9 +122,7 @@ class FineTuner:
         Returns:
             str: The save path
         """
-        dir_path = Path(osp.join(env["selfChatBot_results"], self.dataset_name))
-        dir_path.mkdir(exist_ok=True)
-        return dir_path
+        return Path(osp.join(env["selfChatBot_results"], self.dataset_name))
 
     def fine_tune(self, epochs: int):
         """Fine tune the model
@@ -133,7 +131,9 @@ class FineTuner:
             epochs (int): The number of epochs
         """
         train_size = len(self.train_dataloader)
+        save_path = self.get_save_path()
         best_loss = 1e9
+        save_path.mkdir(parents=True, exist_ok=True)
         for epoch in range(epochs):
             self.model.train()
             total_train_loss = 0.0
@@ -154,4 +154,4 @@ class FineTuner:
             if val_loss < best_loss:
                 best_loss = val_loss
                 print(f"New best validation loss: {best_loss}")
-                self.model.save_pretrained(self.get_save_path())
+                self.model.save_pretrained(save_path)
