@@ -1,4 +1,3 @@
-import torch
 import argparse
 import json
 import os.path as osp
