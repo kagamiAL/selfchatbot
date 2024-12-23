@@ -35,6 +35,17 @@ def printProgressBar(
         print()
 
 
+def write_to_log(save_path: Path, text: str) -> None:
+    """Writes text to the log file
+
+    Args:
+        save_path (Path): The save path
+        text (str): The text to write
+    """
+    with open(osp.join(save_path, "log.txt"), "a") as f:
+        f.write(text + "\n")
+
+
 class FineTuner:
     def __init__(
         self,
@@ -134,6 +145,7 @@ class FineTuner:
         save_path = self.get_save_path()
         best_loss = 1e9
         save_path.mkdir(parents=True, exist_ok=True)
+        open(osp.join(save_path, "log.txt"), "w").close()
         for epoch in range(epochs):
             self.model.train()
             total_train_loss = 0.0
@@ -148,10 +160,11 @@ class FineTuner:
                 loss = self.train_step(batch)
                 total_train_loss += loss
             val_loss = self.get_avg_val_loss()
-            print(
-                f"Epoch: {epoch + 1}, Train Loss: {total_train_loss / train_size}, Validation Loss: {val_loss}"
-            )
+            result_string = f"Epoch: {epoch + 1}, Train Loss: {total_train_loss / train_size}, Validation Loss: {val_loss}"
+            print(result_string)
             if val_loss < best_loss:
                 best_loss = val_loss
                 print(f"New best validation loss: {best_loss}")
+                result_string += f", New best validation loss: {best_loss}"
                 self.model.save_pretrained(save_path)
+            write_to_log(save_path, result_string)
