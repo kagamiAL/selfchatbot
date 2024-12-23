@@ -2,6 +2,14 @@ import re
 from DataProcessing import process_methods
 
 
+def get_last_user_idx(pre_processed: list[str]) -> int:
+    k = len(pre_processed) - pre_processed[::-1].index("You:") - 1
+    sub = pre_processed[k:]
+    if "User:" in sub:
+        return k + sub.index("User:")
+    return len(pre_processed)
+
+
 def preprocess(text: str, params: dict) -> str:
     """
     Preprocess DiscordChatExporter data
@@ -33,7 +41,7 @@ def preprocess(text: str, params: dict) -> str:
     # I don't care that this is O(n^2)
     i = pre_processed.index(people_labels[0])
     current = None
-    for j in range(i, len(pre_processed)):
+    for j in range(i, get_last_user_idx(pre_processed)):
         if pre_processed[j] in people_labels:
             if pre_processed[j] != current:
                 if (
