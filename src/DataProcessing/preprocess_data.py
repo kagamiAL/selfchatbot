@@ -60,6 +60,7 @@ def generate_default_params(preprocessed_dataset_path: str) -> dict:
         "warmup_steps_percent": 0.05,
         "dropout": 0,
         "epochs": 500,
+        "dataset_split": 0.8,
     }
 
 
