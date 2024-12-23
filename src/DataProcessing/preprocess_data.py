@@ -58,11 +58,12 @@ def preprocess_data(dataset_id: int):
         for file in os.listdir(format_path):
             if file.endswith(".json"):
                 continue
-            with open(osp.join(format_path, file), "r") as f:
+            with open(osp.join(format_path, file), "r", encoding="utf-8") as f:
                 processed_text.append(preprocessors[data_format](f.read(), json_data))
     with open(
         osp.join(env["selfChatBot_preprocessed"], f"{dataset_name}.txt"),
         "w",
+        encoding="utf-8",
     ) as f:
         f.write("\n".join(processed_text))
 
