@@ -10,20 +10,21 @@ from pathlib import Path
 preprocessors = {}
 
 
-def get_path_to_dataset_and_name(dataset_id: int) -> tuple[str, str]:
+def get_path_to_dataset_and_name(variable: str, dataset_id: int) -> tuple[str, str]:
     """Returns the path to the dataset with ID dataset_id
 
     Args:
+        variable (str): name of the environment variable
         dataset_id (int): ID of the dataset
 
     Returns:
         tuple[str, str]: path to the dataset and name of the dataset
     """
-    for dataset in os.listdir(env["selfChatBot_raw"]):
+    for dataset in os.listdir(env[variable]):
         result = re.findall(f"Dataset_\\d+", dataset)
         if result:
             if int(result[0].split("_")[1]) == dataset_id:
-                return os.path.join(env["selfChatBot_raw"], dataset), dataset
+                return os.path.join(env[variable], dataset), dataset
     raise FileNotFoundError(f"Dataset with ID {dataset_id} not found")
 
 
@@ -68,7 +69,9 @@ def preprocess_data(dataset_id: int):
     Args:
         dataset_id (int): ID of the dataset to preprocess
     """
-    dataset_path, dataset_name = get_path_to_dataset_and_name(dataset_id)
+    dataset_path, dataset_name = get_path_to_dataset_and_name(
+        "selfChatBot_raw", dataset_id
+    )
     processed_text = []
     for data_format in os.listdir(dataset_path):
         if not data_format in preprocessors:
