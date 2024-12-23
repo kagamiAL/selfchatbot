@@ -5,6 +5,7 @@ import os.path as osp
 from os import environ as env
 import json
 from typing import Optional
+from pathlib import Path
 
 preprocessors = {}
 
@@ -42,6 +43,25 @@ def get_json_data(data_format_path: str) -> Optional[dict]:
     return None
 
 
+def generate_default_params(preprocessed_dataset_path: str) -> dict:
+    """Generate default parameters for fine-tuning
+
+    Args:
+        preprocessed_dataset_path (str): path to the preprocessed dataset
+
+    Returns:
+        dict: default parameters
+    """
+    return {
+        "model": "gpt2",
+        "batch_size": 8,
+        "learning_rate": 5e-5,
+        "warmup_steps_percent": 0.05,
+        "dropout": 0,
+        "epochs": 500,
+    }
+
+
 def preprocess_data(dataset_id: int):
     """Preprocesses data in dataset with ID dataset_id
 
@@ -60,15 +80,44 @@ def preprocess_data(dataset_id: int):
                 continue
             with open(osp.join(format_path, file), "r", encoding="utf-8") as f:
                 processed_text.append(preprocessors[data_format](f.read(), json_data))
+    directory_path = osp.join(env["selfChatBot_preprocessed"], dataset_name)
+    Path(directory_path).mkdir(exist_ok=True)
     with open(
-        osp.join(env["selfChatBot_preprocessed"], f"{dataset_name}.txt"),
+        osp.join(directory_path, "corpora.txt"),
         "w",
         encoding="utf-8",
     ) as f:
         f.write("\n".join(processed_text))
+    with open(osp.join(directory_path, "parameters.json"), "w") as f:
+        json.dump(
+            generate_default_params(directory_path),
+            f,
+            indent="\t",
+            separators=(",", ": "),
+        )
+
+
+def add_preprocessor(name, func):
+    """
+    Add a new preprocessor
+
+    Args:
+        name (str): name of the preprocessor
+        func (function): function to preprocess
+
+    Returns:
+        None
+    """
+    preprocessors[name] = func
 
 
 def main():
+    """Main function to preprocess data from different sources contained in a Dataset
+
+    Raises:
+        Exception: If selfChatBot_raw variable is not set in environment
+        Exception: If selfChatBot_preprocessed variable is not set in environment
+    """
     parser = argparse.ArgumentParser(
         description="Preprocesses data from different sources contained in a Dataset"
     )
@@ -84,17 +133,3 @@ def main():
     if not env.get("selfChatBot_preprocessed"):
         raise Exception("selfChatBot_preprocessed variable not set in environment")
     preprocess_data(args.d)
-
-
-def add_preprocessor(name, func):
-    """
-    Add a new preprocessor
-
-    Args:
-        name (str): name of the preprocessor
-        func (function): function to preprocess
-
-    Returns:
-        None
-    """
-    preprocessors[name] = func
