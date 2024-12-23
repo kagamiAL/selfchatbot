@@ -10,6 +10,7 @@ from transformers import (
     GPT2TokenizerFast,
     get_linear_schedule_with_warmup,
 )
+from FineTune.finetuner import FineTuner
 from FineTune.chat_dataset import ChatDataset
 from DataProcessing.preprocess_data import get_path_to_dataset_and_name
 
@@ -80,12 +81,12 @@ def fine_tuning_loop(dataset_id: int):
     dataset_path, dataset_name = get_path_to_dataset_and_name(
         "selfChatBot_preprocessed", dataset_id
     )
-    device = torch.cuda.is_available() and "cuda" or "cpu"
     parameters = get_params(dataset_path)
-    corpora = get_corpora(dataset_path)
-    model = GPT2LMHeadModel.from_pretrained(parameters["model"]).to(device)
-    tokenizer = GPT2TokenizerFast.from_pretrained(parameters["model"])
-    chat_dataset = ChatDataset(corpora, tokenizer)
+    model = GPT2LMHeadModel.from_pretrained(parameters["model"])
+    chat_dataset = ChatDataset(
+        get_corpora(dataset_path),
+        GPT2TokenizerFast.from_pretrained(parameters["model"]),
+    )
     train_size = int(parameters["dataset_split"] * len(chat_dataset))
     val_size = len(chat_dataset) - train_size
     train_dataset, val_dataset = random_split(chat_dataset, [train_size, val_size])
@@ -102,33 +103,15 @@ def fine_tuning_loop(dataset_id: int):
         num_warmup_steps=int(parameters["warmup_steps_percent"] * total_steps),
         num_training_steps=total_steps,
     )
-    for i in range(parameters["epochs"]):
-        model.train()
-        total_train_loss = 0
-        total_val_loss = 0
-        for step, batch in enumerate(train_dataloader):
-            printProgressBar(
-                step + 1,
-                len(train_dataloader),
-                prefix=f"Epoch: {
-                    i + 1}",
-                suffix=f"{step + 1}/{len(train_dataloader)}",
-            )
-            input_ids = batch[0].to(device)  # Input IDs (text data)
-            labels = batch[0].to(device)  # Labels are the same as input_ids
-            attn_mask = batch[1].to(device)  # Attention mask
-            optimizer.zero_grad()  # Clear the gradients
-            outputs = model(
-                input_ids=input_ids,
-                labels=labels,
-                attention_mask=attn_mask,
-            )
-            loss = outputs.loss  # Extract loss from model's output
-            total_train_loss += loss.item()
-            loss.backward()  # Backpropagate the gradients
-            optimizer.step()  # Update the model parameters
-            scheduler.step()  # Step the learning rate scheduler
-        # TODO: Calculate average validation loss for checkpointing
+    finetuner = FineTuner(
+        model=model,
+        optimizer=optimizer,
+        scheduler=scheduler,
+        dataset_name=dataset_name,
+        train_dataloader=train_dataloader,
+        val_dataloader=val_dataloader,
+    )
+    finetuner.fine_tune(parameters["epochs"])
 
 
 def main():
