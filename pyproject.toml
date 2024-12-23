@@ -18,6 +18,7 @@ requires-python = ">=3.12"
 
 [project.scripts]
 selfChatBot_preprocess = "DataProcessing.preprocess_data:main"
+selfChatBot_train = "FineTune.fine_tune:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
