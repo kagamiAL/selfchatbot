@@ -7,6 +7,7 @@ from os import environ as env
 from transformers import (
     GPT2LMHeadModel,
     GPT2TokenizerFast,
+    GPT2Config,
     get_linear_schedule_with_warmup,
 )
 from FineTune.finetuner import FineTuner
@@ -81,7 +82,11 @@ def fine_tuning_loop(dataset_id: int):
         "selfChatBot_preprocessed", dataset_id
     )
     parameters = get_params(dataset_path)
-    model = GPT2LMHeadModel.from_pretrained(parameters["model"])
+    dropout = parameters["dropout"]
+    config = GPT2Config.from_pretrained(
+        parameters["model"], resid_pdrop=dropout, embd_pdrop=dropout, attn_pdrop=dropout
+    )
+    model = GPT2LMHeadModel.from_pretrained(parameters["model"], config=config)
     chat_dataset = ChatDataset(
         get_corpora(dataset_path),
         GPT2TokenizerFast.from_pretrained(parameters["model"]),
@@ -96,7 +101,11 @@ def fine_tuning_loop(dataset_id: int):
         val_dataset, batch_size=parameters["batch_size"], shuffle=False
     )
     total_steps = len(train_dataloader) * parameters["epochs"]
-    optimizer = AdamW(model.parameters(), lr=parameters["learning_rate"])
+    optimizer = AdamW(
+        model.parameters(),
+        lr=parameters["learning_rate"],
+        weight_decay=parameters["weight_decay"],
+    )
     scheduler = get_linear_schedule_with_warmup(
         optimizer,
         num_warmup_steps=int(parameters["warmup_steps_percent"] * total_steps),
