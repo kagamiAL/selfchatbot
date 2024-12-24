@@ -53,3 +53,17 @@ def remove_braced_content(text) -> str:
 
     pattern = r"\{.*?\}"
     return re.sub(pattern, "", text)
+
+
+def remove_phone_numbers(text):
+    # Regular expression to match phone numbers (e.g., formats like 123-456-7890, (123) 456-7890, 1234567890)
+    phone_number_pattern = r"\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}"
+    cleaned_text = re.sub(phone_number_pattern, "1234567890", text)
+    return cleaned_text
+
+
+def remove_social_media_handles(text):
+    # Regular expression to match social media handles (e.g., formats like @username, @username123, @username123_)
+    social_media_pattern = r"[@#][\w.]+"
+    cleaned_text = re.sub(social_media_pattern, "@anonymous", text)
+    return cleaned_text

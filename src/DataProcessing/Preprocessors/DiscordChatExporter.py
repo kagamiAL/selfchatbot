@@ -25,6 +25,8 @@ def preprocess(text: str, params: dict) -> str:
     text = process_methods.remove_all_emoji(text)
     text = process_methods.remove_links(text)
     text = process_methods.remove_braced_content(text)
+    text = process_methods.remove_phone_numbers(text)
+    text = process_methods.remove_social_media_handles(text)
     text = process_methods.normalize_whitespace(text)
     pre_processed = []
     people_labels = ["User:", "You:"]
