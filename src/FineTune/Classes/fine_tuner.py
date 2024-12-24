@@ -1,4 +1,5 @@
 import torch
+import json
 import os.path as osp
 from pathlib import Path
 from os import environ as env
@@ -42,8 +43,32 @@ def write_to_log(save_path: Path, text: str) -> None:
         save_path (Path): The save path
         text (str): The text to write
     """
-    with open(osp.join(save_path, "log.txt"), "a") as f:
+    with open(save_path.joinpath("log.txt"), "a") as f:
         f.write(text + "\n")
+
+
+def save_default_generation_params(save_path: Path):
+    """Saves the default generation parameters if they don't exist
+
+    Args:
+        save_path (Path): The save path
+    """
+    generation_params = save_path.joinpath("generation_params.json")
+    if not generation_params.is_file():
+        with open(generation_params, "w") as f:
+            json.dump(
+                {
+                    "max_length": 100,
+                    "temperature": 0.8,
+                    "top_p": 0.9,
+                    "top_k": 50,
+                    "repetition_penalty": 1.1,
+                    "num_return_sequences": 10,
+                },
+                f,
+                indent="\t",
+                separators=(",", ": "),
+            )
 
 
 class FineTuner:
@@ -145,7 +170,8 @@ class FineTuner:
         save_path = self.get_save_path()
         best_loss = 1e9
         save_path.mkdir(parents=True, exist_ok=True)
-        open(osp.join(save_path, "log.txt"), "w").close()
+        open(save_path.joinpath("log.txt"), "w").close()
+        save_default_generation_params(save_path)
         for epoch in range(epochs):
             self.model.train()
             total_train_loss = 0.0
