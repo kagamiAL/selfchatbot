@@ -6,8 +6,9 @@ from os import environ as env
 import json
 from typing import Optional
 from pathlib import Path
+from Classes.Preprocessors.preprocessor import Preprocessor
 
-preprocessors = {}
+preprocessors: dict[str, Preprocessor] = {}
 
 
 def get_path_to_dataset_and_name(variable: str, dataset_id: int) -> tuple[str, str]:
@@ -28,33 +29,37 @@ def get_path_to_dataset_and_name(variable: str, dataset_id: int) -> tuple[str, s
     raise FileNotFoundError(f"Dataset with ID {dataset_id} not found")
 
 
-def get_json_data(data_format_path: str) -> Optional[dict]:
+def get_json_data(data_format_path: str, model: str) -> Optional[dict]:
     """Returns the parsed data.json file in data_format_path
 
     Args:
         data_format_path (str): path to the data format
+        model (str): name of the model
 
     Returns:
-        Optional[dict]: data.json file in data_format_path if it exists else None
+        dict: data.json file in data_format_path
     """
+    json_data = {}
     json_path = osp.join(data_format_path, "data.json")
     if osp.exists(json_path):
         with open(json_path, "r") as f:
-            return json.load(f)
-    return None
+            json_data = json.load(f)
+    json_data["model"] = model
+    return json_data
 
 
-def generate_default_params(preprocessed_dataset_path: str) -> dict:
+def generate_default_params(max_length: int) -> dict:
     """Generate default parameters for fine-tuning
 
     Args:
         preprocessed_dataset_path (str): path to the preprocessed dataset
+        max_length (int): max length of the dataset
 
     Returns:
         dict: default parameters
     """
     return {
-        "model": "gpt2",
+        "max_length": max_length,
         "batch_size": 8,
         "learning_rate": 5e-5,
         "warmup_steps_percent": 0.05,
@@ -65,7 +70,7 @@ def generate_default_params(preprocessed_dataset_path: str) -> dict:
     }
 
 
-def preprocess_data(dataset_id: int):
+def preprocess_data(dataset_id: int, model: str):
     """Preprocesses data in dataset with ID dataset_id
 
     Args:
@@ -75,16 +80,20 @@ def preprocess_data(dataset_id: int):
         "selfChatBot_raw", dataset_id
     )
     processed_text = []
+    max_length: int = 0
     for data_format in os.listdir(dataset_path):
         if not data_format in preprocessors:
             continue
         format_path = osp.join(dataset_path, data_format)
-        json_data = get_json_data(format_path)
+        preprocessor: Preprocessor = preprocessors[data_format](
+            get_json_data(format_path, model)
+        )
         for file in os.listdir(format_path):
             if file.endswith(".json"):
                 continue
             with open(osp.join(format_path, file), "r", encoding="utf-8") as f:
-                processed_text.append(preprocessors[data_format](f.read(), json_data))
+                processed_text.append(preprocessor.preprocess(f.read()))
+        max_length = max(max_length, preprocessor.get_max_length())
     directory_path = osp.join(env["selfChatBot_preprocessed"], dataset_name)
     Path(directory_path).mkdir(exist_ok=True)
     with open(
@@ -92,10 +101,10 @@ def preprocess_data(dataset_id: int):
         "w",
         encoding="utf-8",
     ) as f:
-        f.write("\n".join(processed_text))
+        f.write("\n\n".join(processed_text))
     with open(osp.join(directory_path, "parameters.json"), "w") as f:
         json.dump(
-            generate_default_params(directory_path),
+            generate_default_params(max_length),
             f,
             indent="\t",
             separators=(",", ": "),
@@ -132,9 +141,15 @@ def main():
         help="The ID of the dataset to preprocess",
         required=True,
     )
+    parser.add_argument(
+        "-m",
+        type=str,
+        help="The model you want to fine tune on",
+        required=True,
+    )
     args = parser.parse_args()
     if not env.get("selfChatBot_raw"):
         raise Exception("selfChatBot_raw variable not set in environment")
     if not env.get("selfChatBot_preprocessed"):
         raise Exception("selfChatBot_preprocessed variable not set in environment")
-    preprocess_data(args.d)
+    preprocess_data(args.d, args.m)
