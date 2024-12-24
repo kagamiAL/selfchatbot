@@ -6,9 +6,9 @@ from torch.optim import AdamW
 from torch.utils.data import random_split, DataLoader
 from os import environ as env
 from transformers import (
-    GPT2LMHeadModel,
-    GPT2TokenizerFast,
-    GPT2Config,
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    AutoConfig,
     get_linear_schedule_with_warmup,
 )
 from Classes.fine_tuner import FineTuner
@@ -108,13 +108,13 @@ def fine_tuning_loop(dataset_id: int):
     )
     parameters = get_params(dataset_path)
     dropout = parameters["dropout"]
-    config = GPT2Config.from_pretrained(
+    config = AutoConfig.from_pretrained(
         parameters["model"], resid_pdrop=dropout, embd_pdrop=dropout, attn_pdrop=dropout
     )
-    model = GPT2LMHeadModel.from_pretrained(parameters["model"], config=config)
+    model = AutoModelForCausalLM.from_pretrained(parameters["model"], config=config)
     chat_dataset = ChatDataset(
         get_corpora(dataset_path),
-        GPT2TokenizerFast.from_pretrained(parameters["model"]),
+        AutoTokenizer.from_pretrained(parameters["model"]),
     )
     train_size = int(parameters["dataset_split"] * len(chat_dataset))
     val_size = len(chat_dataset) - train_size
