@@ -12,7 +12,7 @@ def normalize_whitespace(text: str) -> str:
         str: the normalized text
     """
     text = re.sub(r"\n+", "\n", text)
-    text = re.sub(r"\s{2,}", " ", text)
+    text = re.sub(r"[^\S\n]+", " ", text)
     return text
 
 
