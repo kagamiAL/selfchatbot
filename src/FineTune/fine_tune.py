@@ -11,7 +11,7 @@ from transformers import (
     AutoConfig,
     get_linear_schedule_with_warmup,
 )
-from Classes.fine_tuner import FineTuner
+from Classes.FineTuners.fine_tuner import FineTuner
 from Classes.chat_dataset import ChatDataset
 from DataProcessing.preprocess_data import get_path_to_dataset_and_name
 
