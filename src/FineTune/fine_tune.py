@@ -1,6 +1,7 @@
 import argparse
 import json
 import os.path as osp
+from pathlib import Path
 from torch.optim import AdamW
 from torch.utils.data import random_split, DataLoader
 from os import environ as env
@@ -72,6 +73,30 @@ def get_corpora(dataset_path: str) -> str:
         return f.read()
 
 
+def save_default_generation_params(save_path: Path):
+    """Saves the default generation parameters if they don't exist
+
+    Args:
+        save_path (Path): The save path
+    """
+    generation_params = save_path.joinpath("generation_params.json")
+    if not generation_params.is_file():
+        with open(generation_params, "w") as f:
+            json.dump(
+                {
+                    "max_length": 100,
+                    "temperature": 0.8,
+                    "top_p": 0.9,
+                    "top_k": 50,
+                    "repetition_penalty": 1.1,
+                    "num_return_sequences": 10,
+                },
+                f,
+                indent="\t",
+                separators=(",", ": "),
+            )
+
+
 def fine_tuning_loop(dataset_id: int):
     """Fine tune a model on a dataset
 
@@ -111,11 +136,14 @@ def fine_tuning_loop(dataset_id: int):
         num_warmup_steps=int(parameters["warmup_steps_percent"] * total_steps),
         num_training_steps=total_steps,
     )
+    save_path = Path(osp.join(env["selfChatBot_results"], dataset_name))
+    save_path.mkdir(parents=True, exist_ok=True)
+    save_default_generation_params(save_path)
     finetuner = FineTuner(
         model=model,
         optimizer=optimizer,
         scheduler=scheduler,
-        dataset_name=dataset_name,
+        save_path=save_path,
         train_dataloader=train_dataloader,
         val_dataloader=val_dataloader,
     )

@@ -1,6 +1,4 @@
 import torch
-import json
-import os.path as osp
 from pathlib import Path
 from os import environ as env
 
@@ -47,43 +45,19 @@ def write_to_log(save_path: Path, text: str) -> None:
         f.write(text + "\n")
 
 
-def save_default_generation_params(save_path: Path):
-    """Saves the default generation parameters if they don't exist
-
-    Args:
-        save_path (Path): The save path
-    """
-    generation_params = save_path.joinpath("generation_params.json")
-    if not generation_params.is_file():
-        with open(generation_params, "w") as f:
-            json.dump(
-                {
-                    "max_length": 100,
-                    "temperature": 0.8,
-                    "top_p": 0.9,
-                    "top_k": 50,
-                    "repetition_penalty": 1.1,
-                    "num_return_sequences": 10,
-                },
-                f,
-                indent="\t",
-                separators=(",", ": "),
-            )
-
-
 class FineTuner:
     def __init__(
         self,
         model,
         optimizer,
         scheduler,
-        dataset_name,
+        save_path,
         train_dataloader,
         val_dataloader,
     ):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model = model.to(self.device)
-        self.dataset_name = dataset_name
+        self.save_path = save_path
         self.train_dataloader = train_dataloader
         self.val_dataloader = val_dataloader
         self.optimizer = optimizer
@@ -152,14 +126,6 @@ class FineTuner:
                 total_val_loss += v_loss.item()
         return total_val_loss / len(self.val_dataloader)
 
-    def get_save_path(self) -> Path:
-        """Get the save path
-
-        Returns:
-            str: The save path
-        """
-        return Path(osp.join(env["selfChatBot_results"], self.dataset_name))
-
     def fine_tune(self, epochs: int):
         """Fine tune the model
 
@@ -167,11 +133,8 @@ class FineTuner:
             epochs (int): The number of epochs
         """
         train_size = len(self.train_dataloader)
-        save_path = self.get_save_path()
         best_loss = 1e9
-        save_path.mkdir(parents=True, exist_ok=True)
-        open(save_path.joinpath("log.txt"), "w").close()
-        save_default_generation_params(save_path)
+        open(self.save_path.joinpath("log.txt"), "w").close()
         for epoch in range(epochs):
             self.model.train()
             total_train_loss = 0.0
@@ -192,5 +155,5 @@ class FineTuner:
                 best_loss = val_loss
                 print(f"New best validation loss: {best_loss}")
                 result_string += f", New best validation loss: {best_loss}"
-                self.model.save_pretrained(save_path)
-            write_to_log(save_path, result_string)
+                self.model.save_pretrained(self.save_path)
+            write_to_log(self.save_path, result_string)
