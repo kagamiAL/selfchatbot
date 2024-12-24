@@ -64,6 +64,6 @@ def remove_phone_numbers(text):
 
 def remove_social_media_handles(text):
     # Regular expression to match social media handles (e.g., formats like @username, @username123, @username123_)
-    social_media_pattern = r"[@#][\w.]+"
-    cleaned_text = re.sub(social_media_pattern, "@anonymous", text)
+    social_media_pattern = r"@[\w\d._]+"
+    cleaned_text = re.sub(social_media_pattern, "", text)
     return cleaned_text
