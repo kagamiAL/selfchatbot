@@ -59,6 +59,8 @@ def generate_default_params(preprocessed_dataset_path: str) -> dict:
         "learning_rate": 5e-5,
         "warmup_steps_percent": 0.05,
         "epochs": 500,
+        "dropout": 0.1,
+        "weight_decay": 0.01,
         "dataset_split": 0.8,
     }
 
