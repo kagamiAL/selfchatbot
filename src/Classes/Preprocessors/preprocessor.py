@@ -27,7 +27,7 @@ class Preprocessor:
         text = process_methods.remove_phone_numbers(text)
         text = process_methods.remove_social_media_handles(text)
         text = process_methods.normalize_whitespace(text)
-        raise text.splitlines()
+        return text.splitlines()
 
     def preprocess_normalized(self, strings: list[str]) -> str:
         """Preprocesses a list of normalized strings in the format:
@@ -51,6 +51,9 @@ class Preprocessor:
                 processed_data.append([])
             prev_time = epoch_time
         return "\n".join(strings)
+
+    def get_max_length(self) -> int:
+        return self.max_length
 
     def preprocess(self, text: str) -> str:
         """Preprocesses a piece of text
