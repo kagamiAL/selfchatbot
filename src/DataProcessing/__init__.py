@@ -42,5 +42,4 @@ def get_classes_from_module(module_name: str, parent_class):
 for data_format, preprocessor in get_classes_from_module(
     "Classes.Preprocessors", Preprocessor
 ).items():
-    print(f"Adding preprocessor for {data_format}")
     add_preprocessor(data_format, preprocessor)

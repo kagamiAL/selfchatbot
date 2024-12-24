@@ -12,13 +12,15 @@ license = { text = "MIT" }
 dependencies = [
     "torch",  # Latest version
     "transformers",  # Latest version
-    "emoji"  # Latest version
+    "emoji",  # Latest version
+    "python-dateutil",  # Latest version
 ]
 requires-python = ">=3.12"
 
 [project.scripts]
 selfChatBot_preprocess = "DataProcessing.preprocess_data:main"
 selfChatBot_train = "FineTune.fine_tune:main"
+selfChatBot_play = "Playground.model_play:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
