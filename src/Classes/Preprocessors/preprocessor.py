@@ -1,17 +1,21 @@
 import re
-from DataProcessing import process_methods
+from transformers import AutoTokenizer
+from abc import ABC, abstractmethod
 
 
-class Preprocessor:
+class Preprocessor(ABC):
     DATA_FORMAT: str = "Default"
+
+    tokenizer: AutoTokenizer
+
     COMBINE_TIME: int = 5 * 60
     BLOCK_SPLIT_TIME: int = 60 * 60
-    model: str
     max_length: int = 0
 
     def __init__(self, params: dict):
-        self.model = params["model"]
+        self.tokenizer = AutoTokenizer.from_pretrained(params["model"])
 
+    @abstractmethod
     def normalize(self, text: str) -> list[str]:
         """Normalizes a piece of text before preprocessing
 
@@ -21,13 +25,7 @@ class Preprocessor:
         Returns:
             list[str]: the normalized text split into lines
         """
-        text = process_methods.remove_all_emoji(text)
-        text = process_methods.remove_links(text)
-        text = process_methods.remove_braced_content(text)
-        text = process_methods.remove_phone_numbers(text)
-        text = process_methods.remove_social_media_handles(text)
-        text = process_methods.normalize_whitespace(text)
-        return text.splitlines()
+        raise NotImplementedError
 
     def preprocess_normalized(self, strings: list[str]) -> str:
         """Preprocesses a list of normalized strings in the format:
