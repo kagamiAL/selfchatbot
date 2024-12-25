@@ -48,17 +48,17 @@ def get_json_data(data_format_path: str, model: str) -> Optional[dict]:
     return json_data
 
 
-def generate_default_params() -> dict:
+def generate_default_params(model_name: str) -> dict:
     """Generate default parameters for fine-tuning
 
     Args:
-        preprocessed_dataset_path (str): path to the preprocessed dataset
-        max_length (int): max length of the dataset
+        model_name (str): name of the model
 
     Returns:
         dict: default parameters
     """
     return {
+        "model": model_name,
         "batch_size": 8,
         "learning_rate": 5e-5,
         "warmup_steps_percent": 0.05,
@@ -101,7 +101,7 @@ def preprocess_data(dataset_id: int, model: str):
         f.write("\n\n".join(processed_text))
     with open(osp.join(directory_path, "parameters.json"), "w") as f:
         json.dump(
-            generate_default_params(),
+            generate_default_params(model),
             f,
             indent="\t",
             separators=(",", ": "),
