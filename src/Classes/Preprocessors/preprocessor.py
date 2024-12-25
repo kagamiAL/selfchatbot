@@ -10,6 +10,9 @@ class Preprocessor(ABC):
 
     COMBINE_TIME: int = 5 * 60
     BLOCK_SPLIT_TIME: int = 60 * 60
+    MAXIMUM_LENGTH: int = 1024
+    MINIMUM_LENGTH: int = 75
+
     max_length: int = 0
 
     def __init__(self, params: dict):
@@ -27,6 +30,27 @@ class Preprocessor(ABC):
         """
         raise NotImplementedError
 
+    def __split_block_by_token_size(self, block: list[str]) -> list[list[str]]:
+        """Splits a block if its token max length is exceeded, also ignores blocks that are < minimum length
+
+        Args:
+            block (list[str]): the block
+
+        Returns:
+            list[list[str]]: the split block(s)
+        """
+        encoded = self.tokenizer.encode("\n".join(block), add_special_tokens=False)
+        length = len(encoded)
+        if length < self.MINIMUM_LENGTH or len(block) == 1:
+            return []
+        if length > self.MAXIMUM_LENGTH:
+            m = len(block) // 2
+            return self.__split_block_by_token_size(
+                block[:m]
+            ) + self.__split_block_by_token_size(block[m:])
+        self.max_length = max(self.max_length, length)
+        return [block]
+
     def preprocess_normalized(self, strings: list[str]) -> str:
         """Preprocesses a list of normalized strings in the format:
         Epoch-time(in seconds and int) U: message
@@ -39,16 +63,28 @@ class Preprocessor(ABC):
         Returns:
             str: the preprocessed text
         """
-        processed_data = []
+        processed_data: list[list[str]] = []
         prev_time, prev_label = 0, None
+        # I DO NOT KNOW WHY THIS DOES NOT ERROR, IT JUST WORKS, IM LEAVING IT ALONE
+        # THIS IS MESSY I KNOW
         for string in strings:
             epoch_time = int(re.search(r"\d+", string).group())
             label = re.search(r"U|Y", string).group()
+            no_epoch = string.lstrip("0123456789 ")
+            raw_string = re.search(r"^[YU]:\s*(.*)", no_epoch).group(1)
             time_diff = epoch_time - prev_time
-            if time_diff > self.BLOCK_SPLIT_TIME:
+            if time_diff > self.BLOCK_SPLIT_TIME or not processed_data:
                 processed_data.append([])
+            if prev_label == label and time_diff < self.COMBINE_TIME:
+                processed_data[-1][-1] += f" {raw_string.lower()}"
+            else:
+                processed_data[-1].append(f"{label}: {raw_string.capitalize()}")
             prev_time = epoch_time
-        return "\n".join(strings)
+            prev_label = label
+        final_processed = []
+        for processed in processed_data:
+            final_processed += self.__split_block_by_token_size(processed)
+        return "\n\n".join(map("\n".join, final_processed))
 
     def get_max_length(self) -> int:
         return self.max_length
