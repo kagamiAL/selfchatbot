@@ -2,14 +2,26 @@ from torch.utils.data import Dataset
 import torch
 
 
+def get_longest_token_length(data: list[str], tokenizer) -> int:
+    """Returns the longest token length in the dataset
+
+    Args:
+        data (list[str]): The dataset
+        tokenizer (_type_): The tokenizer
+
+    Returns:
+        int: The longest token length
+    """
+    return max(len(tokenizer.encode(line)) for line in data)
+
+
 class ChatDataset(Dataset):
     input_ids: list[torch.tensor]
     attn_masks: list[torch.tensor]
 
     def __init__(self, text: str, tokenizer):
-        split = text.splitlines()
-        data = list(map("\n".join, zip(split[0::2], split[1::2])))
-        max_length = len(max(data, key=len))
+        data = [line + "\n" for line in text.split("\n\n")]
+        max_length = get_longest_token_length(data, tokenizer)
         self.data = data
         self.input_ids = []
         self.attn_masks = []
@@ -19,7 +31,7 @@ class ChatDataset(Dataset):
                 prompt,
                 truncation=True,
                 padding="max_length",
-                max_length=max_length,
+                max_length=max_length,  # Max tokens allowed
                 return_tensors="pt",
             )
             self.input_ids.append(encodings["input_ids"])
