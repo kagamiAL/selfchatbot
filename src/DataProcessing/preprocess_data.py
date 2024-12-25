@@ -48,7 +48,7 @@ def get_json_data(data_format_path: str, model: str) -> Optional[dict]:
     return json_data
 
 
-def generate_default_params(max_length: int) -> dict:
+def generate_default_params() -> dict:
     """Generate default parameters for fine-tuning
 
     Args:
@@ -59,7 +59,6 @@ def generate_default_params(max_length: int) -> dict:
         dict: default parameters
     """
     return {
-        "max_length": max_length,
         "batch_size": 8,
         "learning_rate": 5e-5,
         "warmup_steps_percent": 0.05,
@@ -80,7 +79,6 @@ def preprocess_data(dataset_id: int, model: str):
         "selfChatBot_raw", dataset_id
     )
     processed_text = []
-    max_length: int = 0
     for data_format in os.listdir(dataset_path):
         if not data_format in preprocessors:
             continue
@@ -93,7 +91,6 @@ def preprocess_data(dataset_id: int, model: str):
                 continue
             with open(osp.join(format_path, file), "r", encoding="utf-8") as f:
                 processed_text.append(preprocessor.preprocess(f.read()))
-        max_length = max(max_length, preprocessor.get_max_length())
     directory_path = osp.join(env["selfChatBot_preprocessed"], dataset_name)
     Path(directory_path).mkdir(exist_ok=True)
     with open(
@@ -104,7 +101,7 @@ def preprocess_data(dataset_id: int, model: str):
         f.write("\n\n".join(processed_text))
     with open(osp.join(directory_path, "parameters.json"), "w") as f:
         json.dump(
-            generate_default_params(max_length),
+            generate_default_params(),
             f,
             indent="\t",
             separators=(",", ": "),

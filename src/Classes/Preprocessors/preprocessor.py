@@ -13,8 +13,6 @@ class Preprocessor(ABC):
     MAXIMUM_LENGTH: int = 1024
     MINIMUM_LENGTH: int = 75
 
-    max_length: int = 0
-
     def __init__(self, params: dict):
         self.tokenizer = AutoTokenizer.from_pretrained(params["model"])
 
@@ -48,7 +46,6 @@ class Preprocessor(ABC):
             return self.__split_block_by_token_size(
                 block[:m]
             ) + self.__split_block_by_token_size(block[m:])
-        self.max_length = max(self.max_length, length)
         return [block]
 
     def preprocess_normalized(self, strings: list[str]) -> str:
@@ -87,9 +84,6 @@ class Preprocessor(ABC):
         for processed in processed_data:
             final_processed += self.__split_block_by_token_size(processed)
         return "\n\n".join(map("\n".join, final_processed))
-
-    def get_max_length(self) -> int:
-        return self.max_length
 
     def preprocess(self, text: str) -> str:
         """Preprocesses a piece of text
