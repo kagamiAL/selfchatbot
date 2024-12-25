@@ -31,7 +31,11 @@ class DiscordChatExporterPreprocessor(Preprocessor):
             line = arr_text[i]
             match = re.search(pattern, line)
             if match:
-                if i + 1 < len(arr_text) and not re.search(pattern, arr_text[i + 1]):
+                if (
+                    i + 1 < len(arr_text)
+                    and arr_text[i + 1]
+                    and not re.search(pattern, arr_text[i + 1])
+                ):
                     time_stamp = int(
                         parser.parse(
                             re.search(bracket_pattern, match.group(0)).group(1)
