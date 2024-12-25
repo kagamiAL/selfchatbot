@@ -67,3 +67,21 @@ def remove_social_media_handles(text):
     social_media_pattern = r"@[\w\d._]+"
     cleaned_text = re.sub(social_media_pattern, "", text)
     return cleaned_text
+
+
+def default_cleanup(text: str) -> str:
+    """Default cleanup function for preprocessing
+
+    Args:
+        text (str): the text to cleanup
+
+    Returns:
+        str: the cleaned text
+    """
+    return normalize_whitespace(
+        remove_social_media_handles(
+            remove_phone_numbers(
+                remove_braced_content(remove_links(remove_all_emoji(text)))
+            )
+        )
+    )
