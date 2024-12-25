@@ -1,5 +1,6 @@
 import re
 from Classes.Preprocessors.preprocessor import Preprocessor
+from DataProcessing import functional_preprocessing as fp
 from typing import override
 from dateutil import parser
 
@@ -23,21 +24,24 @@ class DiscordChatExporterPreprocessor(Preprocessor):
         pattern = r"\[\d{4}-\d{2}-\d{2} \d{1,2}:\d{2} [AP]M\]\s+(.*)"
         bracket_pattern = r"\[(.*?)\]"
         labels = ["U: ", "Y: "]
-        arr_text = super().normalize(text)
-        arr_text = [line.strip() for line in arr_text]
+        arr_text = [line.strip() for line in fp.default_cleanup(text).splitlines()]
         processed = []
-        for i, line in enumerate(arr_text):
+        i = 0
+        while i < len(arr_text):
+            line = arr_text[i]
             match = re.search(pattern, line)
             if match:
-                # This ignores if the next line is nothing
-                if i + 1 >= len(arr_text) or re.search(pattern, arr_text[i + 1]):
-                    continue
-                time_stamp = int(
-                    parser.parse(
-                        re.search(bracket_pattern, match.group(0)).group(1)
-                    ).timestamp()
-                )
-                processed.append(
-                    f"{time_stamp} {labels[int(match.group(1) == self.username)]}{arr_text[i + 1]}"
-                )
+                if i + 1 < len(arr_text) and not re.search(pattern, arr_text[i + 1]):
+                    time_stamp = int(
+                        parser.parse(
+                            re.search(bracket_pattern, match.group(0)).group(1)
+                        ).timestamp()
+                    )
+                    processed.append(
+                        f"{time_stamp} {labels[int(match.group(1) == self.username)]}{arr_text[i + 1]}"
+                    )
+                    i += 1
+            elif processed:
+                processed[-1] += " " + line
+            i += 1
         return processed
