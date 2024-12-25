@@ -87,7 +87,7 @@ def preprocess_data(dataset_id: int, model: str):
             get_json_data(format_path, model)
         )
         for file in os.listdir(format_path):
-            if file.endswith(".json"):
+            if not file.endswith(".txt"):
                 continue
             with open(osp.join(format_path, file), "r", encoding="utf-8") as f:
                 processed_text.append(preprocessor.preprocess(f.read()))
