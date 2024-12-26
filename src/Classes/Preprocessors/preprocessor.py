@@ -11,7 +11,7 @@ class Preprocessor(ABC):
     COMBINE_TIME: int = 5 * 60
     BLOCK_SPLIT_TIME: int = 60 * 60
     MAXIMUM_LENGTH: int = 1024
-    MINIMUM_LENGTH: int = 75
+    MINIMUM_LENGTH: int = 100
 
     def __init__(self, params: dict):
         self.tokenizer = AutoTokenizer.from_pretrained(params["model"])
@@ -73,7 +73,7 @@ class Preprocessor(ABC):
             if time_diff > self.BLOCK_SPLIT_TIME or not processed_data:
                 processed_data.append([])
             if prev_label == label and time_diff < self.COMBINE_TIME:
-                processed_data[-1][-1] += f" {raw_string}"
+                processed_data[-1][-1] += f" {raw_string.lower()}"
             else:
                 processed_data[-1].append(
                     f"{label}: {raw_string[0].upper()}{raw_string[1:]}"
