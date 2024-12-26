@@ -48,7 +48,7 @@ def get_json_data(data_format_path: str, model: str) -> Optional[dict]:
     return json_data
 
 
-def generate_default_params(model_name: str) -> dict:
+def generate_default_params(model_name: str, type_fine_tune: str) -> dict:
     """Generate default parameters for fine-tuning
 
     Args:
@@ -57,24 +57,33 @@ def generate_default_params(model_name: str) -> dict:
     Returns:
         dict: default parameters
     """
-    return {
+    params = {
         "model": model_name,
+        "type_fine_tune": type_fine_tune,
         "batch_size": 8,
         "learning_rate": 5e-5,
         "warmup_steps_percent": 0.05,
         "epochs": 500,
-        "dropout": 0.1,
         "weight_decay": 0.01,
         "dataset_split": 0.8,
     }
+    if type_fine_tune == "lora":
+        params["lora_r"] = 32
+        params["lora_alpha"] = 64
+        params["lora_dropout"] = 0.05
+    else:
+        params["dropout"] = 0.1
+    return params
 
 
-def preprocess_data(dataset_id: int, model: str):
+def preprocess_data(args: argparse.Namespace):
     """Preprocesses data in dataset with ID dataset_id
 
     Args:
         dataset_id (int): ID of the dataset to preprocess
     """
+    dataset_id = args.d
+    model = args.m
     dataset_path, dataset_name = get_path_to_dataset_and_name(
         "selfChatBot_raw", dataset_id
     )
@@ -101,7 +110,7 @@ def preprocess_data(dataset_id: int, model: str):
         f.write("\n\n".join(processed_text))
     with open(osp.join(directory_path, "parameters.json"), "w") as f:
         json.dump(
-            generate_default_params(model),
+            generate_default_params(model, args.t),
             f,
             indent="\t",
             separators=(",", ": "),
@@ -144,9 +153,17 @@ def main():
         help="The model you want to fine tune on",
         required=True,
     )
+    parser.add_argument(
+        "-t",
+        default="lora",
+        const="lora",
+        nargs="?",
+        choices=["finetune", "lora"],
+        help="The type of fine-tuning to use",
+    )
     args = parser.parse_args()
     if not env.get("selfChatBot_raw"):
         raise Exception("selfChatBot_raw variable not set in environment")
     if not env.get("selfChatBot_preprocessed"):
         raise Exception("selfChatBot_preprocessed variable not set in environment")
-    preprocess_data(args.d, args.m)
+    preprocess_data(args)
