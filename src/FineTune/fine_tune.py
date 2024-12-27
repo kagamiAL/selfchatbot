@@ -74,18 +74,20 @@ def get_corpora(dataset_path: str) -> str:
         return f.read()
 
 
-def save_default_generation_params(save_path: Path):
+def save_default_generation_params(save_path: Path, parameters: dict):
     """Saves the default generation parameters if they don't exist
 
     Args:
         save_path (Path): The save path
     """
-    generation_params = save_path.joinpath("generation_params.json")
+    generation_params = save_path.joinpath("parameters.json")
     if not generation_params.is_file():
         with open(generation_params, "w") as f:
             json.dump(
                 {
-                    "max_length": 100,
+                    "model": parameters["model"],
+                    "type_fine_tune": parameters["type_fine_tune"],
+                    "max_length": 1024,
                     "temperature": 0.8,
                     "top_p": 0.9,
                     "top_k": 50,
@@ -189,7 +191,7 @@ def fine_tuning_loop(dataset_id: int):
     )
     save_path = Path(osp.join(env["selfChatBot_results"], dataset_name))
     save_path.mkdir(parents=True, exist_ok=True)
-    save_default_generation_params(save_path)
+    save_default_generation_params(save_path, parameters)
     finetuner = FineTuner(
         model=model,
         optimizer=optimizer,
