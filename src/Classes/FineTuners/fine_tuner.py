@@ -1,6 +1,5 @@
 import torch
 from pathlib import Path
-from os import environ as env
 
 
 def printProgressBar(
@@ -34,6 +33,21 @@ def printProgressBar(
         print()
 
 
+def get_best_and_final_path(save_path: Path) -> tuple[Path, Path]:
+    """Returns the best and final path
+
+    Args:
+        save_path (Path): The save path
+
+    Returns:
+        tuple[Path, Path]: The best and final path
+    """
+    best_path, final_path = save_path.joinpath("best"), save_path.joinpath("final")
+    best_path.mkdir(exist_ok=True)
+    final_path.mkdir(exist_ok=True)
+    return best_path, final_path
+
+
 def write_to_log(save_path: Path, text: str) -> None:
     """Writes text to the log file
 
@@ -46,6 +60,9 @@ def write_to_log(save_path: Path, text: str) -> None:
 
 
 class FineTuner:
+
+    PATIENCE: int = 8
+
     def __init__(
         self,
         model,
@@ -62,6 +79,7 @@ class FineTuner:
         self.val_dataloader = val_dataloader
         self.optimizer = optimizer
         self.scheduler = scheduler
+        self.patience_counter = 0
 
     def train_step(self, batch: tuple[torch.tensor, torch.tensor]) -> float:
         """A single training step
@@ -134,6 +152,7 @@ class FineTuner:
         """
         train_size = len(self.train_dataloader)
         best_loss = 1e9
+        best_path, final_path = get_best_and_final_path(self.save_path)
         open(self.save_path.joinpath("log.txt"), "w").close()
         for epoch in range(epochs):
             self.model.train()
@@ -153,7 +172,16 @@ class FineTuner:
             print(result_string)
             if val_loss < best_loss:
                 best_loss = val_loss
+                self.patience_counter = 0
                 print(f"New best validation loss: {best_loss}")
                 result_string += f", New best validation loss: {best_loss}"
-                self.model.save_pretrained(self.save_path)
+                self.model.save_pretrained(best_path)
+            else:
+                self.patience_counter += 1
+                if self.patience_counter >= self.PATIENCE:
+                    print(f"Early stopping at epoch {epoch + 1}")
+                    result_string += f", Early stopping at epoch {epoch + 1}"
+                    self.model.save_pretrained(final_path)
             write_to_log(self.save_path, result_string)
+            if self.patience_counter >= self.PATIENCE:
+                break
