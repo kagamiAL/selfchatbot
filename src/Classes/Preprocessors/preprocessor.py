@@ -37,7 +37,9 @@ class Preprocessor(ABC):
         Returns:
             list[list[str]]: the split block(s)
         """
-        encoded = self.tokenizer.encode("\n".join(block) + "\n")
+        encoded = self.tokenizer.encode(
+            self.tokenizer.eos_token.join(block) + self.tokenizer.eos_token
+        )
         length = len(encoded)
         if length < self.MINIMUM_LENGTH or len(block) == 1:
             return []

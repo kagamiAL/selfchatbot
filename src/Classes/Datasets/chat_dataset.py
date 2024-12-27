@@ -20,7 +20,10 @@ class ChatDataset(Dataset):
     attn_masks: list[torch.tensor]
 
     def __init__(self, text: str, tokenizer):
-        data = [line + "\n" for line in text.split("\n\n")]
+        data = [
+            tokenizer.eos_token.join(line.splitlines()) + tokenizer.eos_token
+            for line in text.split("\n\n")
+        ]
         max_length = get_longest_token_length(data, tokenizer)
         self.data = data
         self.input_ids = []
