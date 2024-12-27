@@ -14,6 +14,7 @@ dependencies = [
     "transformers",  # Latest version
     "emoji",  # Latest version
     "python-dateutil",  # Latest version
+    "peft",  # Latest version
 ]
 requires-python = ">=3.12"
 

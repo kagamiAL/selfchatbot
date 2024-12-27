@@ -14,6 +14,7 @@ from transformers import (
 from Classes.FineTuners.fine_tuner import FineTuner
 from Classes.Datasets.chat_dataset import ChatDataset
 from DataProcessing.preprocess_data import get_path_to_dataset_and_name
+from peft import get_peft_model, LoraConfig, TaskType
 
 
 def printProgressBar(
@@ -97,6 +98,60 @@ def save_default_generation_params(save_path: Path):
             )
 
 
+def get_config(parameters: dict) -> AutoConfig:
+    """Returns the config for fine-tuning
+
+    Args:
+        parameters (dict): parameters for fine-tuning
+
+    Returns:
+        AutoConfig: config for fine-tuning
+    """
+    if "dropout" in parameters:
+        return AutoConfig.from_pretrained(
+            parameters["model"],
+            resid_pdrop=parameters["dropout"],
+            embd_pdrop=parameters["dropout"],
+            attn_pdrop=parameters["dropout"],
+        )
+    return AutoConfig.from_pretrained(parameters["model"])
+
+
+def get_lora_config(parameters: dict) -> LoraConfig:
+    """Returns the lora config for lora fine-tuning
+
+    Args:
+        parameters (dict): parameters for lora
+
+    Returns:
+        LoraConfig: lora config
+    """
+    return LoraConfig(
+        task_type=TaskType.CAUSAL_LM,
+        r=parameters["lora_r"],
+        lora_alpha=parameters["lora_alpha"],
+        lora_dropout=parameters["lora_dropout"],
+    )
+
+
+def get_model(parameters: dict) -> AutoModelForCausalLM:
+    """Returns the model for fine-tuning
+
+    Args:
+        parameters (dict): parameters for fine-tuning
+
+    Returns:
+        AutoModelForCausalLM: model for fine-tuning
+    """
+    model = AutoModelForCausalLM.from_pretrained(
+        parameters["model"],
+        config=get_config(parameters),
+    )
+    if parameters["type_fine_tune"] == "lora":
+        return get_peft_model(model, get_lora_config(parameters))
+    return model
+
+
 def fine_tuning_loop(dataset_id: int):
     """Fine tune a model on a dataset
 
@@ -107,11 +162,7 @@ def fine_tuning_loop(dataset_id: int):
         "selfChatBot_preprocessed", dataset_id
     )
     parameters = get_params(dataset_path)
-    dropout = parameters["dropout"]
-    config = AutoConfig.from_pretrained(
-        parameters["model"], resid_pdrop=dropout, embd_pdrop=dropout, attn_pdrop=dropout
-    )
-    model = AutoModelForCausalLM.from_pretrained(parameters["model"], config=config)
+    model = get_model(parameters)
     chat_dataset = ChatDataset(
         get_corpora(dataset_path),
         AutoTokenizer.from_pretrained(parameters["model"]),
