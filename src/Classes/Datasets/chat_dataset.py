@@ -21,7 +21,9 @@ class ChatDataset(Dataset):
 
     def __init__(self, text: str, tokenizer):
         data = [
-            tokenizer.eos_token.join(line.splitlines()) + tokenizer.eos_token
+            tokenizer.eos_token
+            + tokenizer.eos_token.join(line.splitlines())
+            + tokenizer.eos_token
             for line in text.split("\n\n")
         ]
         max_length = get_longest_token_length(data, tokenizer)
