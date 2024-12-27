@@ -133,6 +133,7 @@ def get_lora_config(parameters: dict) -> LoraConfig:
         r=parameters["lora_r"],
         lora_alpha=parameters["lora_alpha"],
         lora_dropout=parameters["lora_dropout"],
+        target_modules=["q_proj", "v_proj"],
     )
 
 
