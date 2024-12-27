@@ -192,6 +192,8 @@ def fine_tuning_loop(dataset_id: int):
     save_path = Path(osp.join(env["selfChatBot_results"], dataset_name))
     save_path.mkdir(parents=True, exist_ok=True)
     save_default_generation_params(save_path, parameters)
+    with open(save_path.joinpath("debug.json"), "w") as f:
+        json.dump(parameters, f, indent="\t", separators=(",", ": "))
     finetuner = FineTuner(
         model=model,
         optimizer=optimizer,
