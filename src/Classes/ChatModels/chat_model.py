@@ -49,6 +49,7 @@ class ChatModel:
         base_path = Path(model_path)
         self.history = []
         self.model = AutoModelForCausalLM.from_pretrained(model_path)
+        self.model.eval()
         self.tokenizer = AutoTokenizer.from_pretrained(
             get_json_data(base_path.joinpath("config.json"))["_name_or_path"]
         )
