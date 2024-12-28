@@ -1,6 +1,7 @@
 import argparse
 import json
 import os.path as osp
+import torch
 from pathlib import Path
 from torch.optim import AdamW
 from torch.utils.data import random_split, DataLoader
@@ -9,12 +10,36 @@ from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
     AutoConfig,
+    Conv1D,
     get_linear_schedule_with_warmup,
 )
 from Classes.FineTuners.fine_tuner import FineTuner
 from Classes.Datasets.chat_dataset import ChatDataset
 from DataProcessing.preprocess_data import get_path_to_dataset_and_name
 from peft import get_peft_model, LoraConfig, TaskType
+
+
+def get_specific_layer_names(model: AutoModelForCausalLM) -> list[str]:
+    """Returns the names of the specific layers for lora fine-tuning
+
+    Args:
+        model (AutoModelForCausalLM): The model for fine-tuning
+
+    Returns:
+        list[str]: The names of the specific layers
+    """
+    layer_names = []
+
+    valid = (torch.nn.Linear, torch.nn.Embedding, torch.nn.Conv2d, Conv1D)
+    # Recursively visit all modules and submodules
+    for name, module in model.named_modules():
+        # Check if the module is an instance of the specified layers
+        if isinstance(module, valid):
+            # model name parsing
+            layer = ".".join(name.split(".")[4:]).split(".")[0]
+            if layer:
+                layer_names.append(layer)
+    return list(set(layer_names))
 
 
 def printProgressBar(
@@ -119,7 +144,7 @@ def get_config(parameters: dict) -> AutoConfig:
     return AutoConfig.from_pretrained(parameters["model"])
 
 
-def get_lora_config(parameters: dict) -> LoraConfig:
+def get_lora_config(parameters: dict, base_model: AutoModelForCausalLM) -> LoraConfig:
     """Returns the lora config for lora fine-tuning
 
     Args:
@@ -128,12 +153,18 @@ def get_lora_config(parameters: dict) -> LoraConfig:
     Returns:
         LoraConfig: lora config
     """
+    # Get the names of the specific layers, if specified else get them automatically
+    target_modules = (
+        "target_modules" in parameters
+        and parameters["target_modules"]
+        or get_specific_layer_names(base_model)
+    )
     return LoraConfig(
         task_type=TaskType.CAUSAL_LM,
         r=parameters["lora_r"],
         lora_alpha=parameters["lora_alpha"],
         lora_dropout=parameters["lora_dropout"],
-        target_modules=["q_proj", "v_proj"],
+        target_modules=target_modules,
     )
 
 
@@ -151,7 +182,7 @@ def get_model(parameters: dict) -> AutoModelForCausalLM:
         config=get_config(parameters),
     )
     if parameters["type_fine_tune"] == "lora":
-        return get_peft_model(model, get_lora_config(parameters))
+        return get_peft_model(model, get_lora_config(parameters, model))
     return model
 
 
