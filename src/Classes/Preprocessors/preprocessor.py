@@ -77,7 +77,7 @@ class Preprocessor(ABC):
             if time_diff > self.BLOCK_SPLIT_TIME or not processed_data:
                 processed_data.append([])
             if prev_label == label and time_diff < self.COMBINE_TIME:
-                processed_data[-1][-1] += f" {raw_string.lower()}"
+                processed_data[-1][-1] += f" {raw_string}"
             else:
                 processed_data[-1].append(
                     f"{label}: {raw_string[0].upper()}{raw_string[1:]}"
