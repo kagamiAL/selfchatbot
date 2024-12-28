@@ -1,21 +1,5 @@
-from transformers import AutoModelForCausalLM, AutoTokenizer
-from pathlib import Path
 import torch.nn.functional as F
-import json
 import re
-
-
-def get_json_data(json_path: str) -> dict:
-    """Returns the parsed data.json file in data_format_path
-
-    Args:
-        data_format_path (str): path to the data format
-
-    Returns:
-        dict: parsed data.json file
-    """
-    with open(json_path, "r") as f:
-        return json.load(f)
 
 
 def filter_responses(prompt: str, responses: list[str]) -> list[str]:
@@ -41,21 +25,14 @@ def filter_responses(prompt: str, responses: list[str]) -> list[str]:
 class ChatModel:
     MAX_LENGTH = 1024
     history: list[str]
-    model: AutoModelForCausalLM
-    tokenizer: AutoTokenizer
     generation_params: dict
 
-    def __init__(self, model_path: str):
-        base_path = Path(model_path)
+    def __init__(self, model, tokenizer, params: dict):
+        model.eval()
         self.history = []
-        self.model = AutoModelForCausalLM.from_pretrained(model_path)
-        self.model.eval()
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            get_json_data(base_path.joinpath("config.json"))["_name_or_path"]
-        )
-        self.generation_params = get_json_data(
-            base_path.joinpath("generation_params.json")
-        )
+        self.generation_params = params
+        self.model = model
+        self.tokenizer = tokenizer
 
     def __generate(self, input_ids):
         """Generates from the model
