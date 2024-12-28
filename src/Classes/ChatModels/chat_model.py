@@ -12,13 +12,12 @@ def filter_responses(prompt: str, responses: list[str]) -> list[str]:
     Returns:
         list[str]: The filtered responses
     """
-    pattern = rf"U:\s?{re.escape(prompt)}\nY:\s?(.*?)\n"
-
+    pattern = rf"U:\s?{re.escape(prompt)}Y:\s?(.*?)(?=U:|$)"
     filtered = []
     for response in responses:
         match = re.search(pattern, response.lstrip())
         if match:
-            filtered.append(match.group(1))
+            filtered.append(match.group(1).strip())
     return filtered
 
 
@@ -67,18 +66,20 @@ class ChatModel:
         Returns:
             dict[str, any]: The formatted encodings
         """
-        formatted_prompt = f"U: {prompt}\nY:"
+        formatted_prompt = (
+            f"{self.tokenizer.eos_token}U: {prompt}{self.tokenizer.eos_token}Y:"
+        )
         final_prompt = formatted_prompt
         if history:
-            final_prompt = f"{"\n".join(self.history)}\n{formatted_prompt}"
+            final_prompt = "".join(self.history) + formatted_prompt
             i = 0
-            max_attemps = len(self.history)
+            max_attempts = len(self.history)
             while (
                 len(self.tokenizer.encode(final_prompt)) > self.MAX_LENGTH
-                and i < max_attemps
+                and i < max_attempts
             ):
                 i += 1
-                final_prompt = f"{"\n".join(self.history[i:])}\n{formatted_prompt}"
+                final_prompt = "".join(self.history[i:]) + formatted_prompt
         return self.tokenizer.encode_plus(final_prompt, return_tensors="pt")
 
     def get_responses(self, input_ids) -> list[str]:
@@ -109,6 +110,7 @@ class ChatModel:
         Returns:
             str: The best response
         """
+        prompt = prompt.strip()
         output = self.__generate(self.__get_encoding(prompt, history))
         # Decode sequences and extract token-wise scores
         sequences = output.sequences
@@ -152,6 +154,7 @@ class ChatModel:
         Returns:
             list[str]: The responses from the model
         """
+        passed_prompt = passed_prompt.strip()
         return filter_responses(
             passed_prompt,
             self.get_responses(self.__get_encoding(passed_prompt, history)),
@@ -164,4 +167,6 @@ class ChatModel:
             prompt (str): the prompt
             response (str): the response
         """
-        self.history.append(f"U: {prompt}\nY: {response}")
+        self.history.append(
+            f"{self.tokenizer.eos_token}U: {prompt.strip()}{self.tokenizer.eos_token}Y: {response}"
+        )
