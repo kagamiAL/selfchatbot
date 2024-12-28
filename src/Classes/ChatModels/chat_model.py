@@ -15,9 +15,8 @@ def filter_responses(prompt: str, responses: list[str]) -> list[str]:
     pattern = rf"U:\s?{re.escape(prompt)}Y:\s?(.*?)(?=U:|$)"
     filtered = []
     for response in responses:
-        match = re.search(pattern, response.lstrip())
-        if match:
-            filtered.append(match.group(1).strip())
+        result = re.findall(pattern, response.lstrip())
+        filtered.append(result[-1])
     return filtered
 
 
