@@ -79,9 +79,7 @@ class Preprocessor(ABC):
             if prev_label == label and time_diff < self.COMBINE_TIME:
                 processed_data[-1][-1] += f" {raw_string}"
             else:
-                processed_data[-1].append(
-                    f"{label}: {raw_string[0].upper()}{raw_string[1:]}"
-                )
+                processed_data[-1].append(f"{label}: {raw_string}")
             prev_time = epoch_time
             prev_label = label
         final_processed = []
