@@ -85,6 +85,7 @@ def main():
     chat_model = ChatModel(*get_chat_model_arguments(dataset_path, args))
     match args.t:
         case "session":
+            print("Start a conversation with the model\n")
             while True:
                 prompt = input("You: ")
                 response = chat_model.prompt_best_response(prompt, True)
