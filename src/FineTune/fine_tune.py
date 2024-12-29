@@ -134,6 +134,8 @@ def get_config(parameters: dict) -> AutoConfig:
     Returns:
         AutoConfig: config for fine-tuning
     """
+    # User can specify the config for fine-tuning
+    # If not specified, use the default config
     if "config" in parameters:
         return AutoConfig.from_pretrained(
             parameters["model"],
