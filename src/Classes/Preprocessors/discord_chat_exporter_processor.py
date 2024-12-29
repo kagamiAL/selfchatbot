@@ -23,8 +23,9 @@ class DiscordChatExporterPreprocessor(Preprocessor):
         # Epoch-time(in seconds and int) You: message
         pattern = r"\[\d{4}-\d{2}-\d{2} \d{1,2}:\d{2} [AP]M\]\s+(.*)"
         bracket_pattern = r"\[(.*?)\]"
-        labels = ["User: ", "You: "]
+        labels = ["User:", "You:"]
         arr_text = [line.strip() for line in fp.default_cleanup(text).splitlines()]
+        last_prefix: str = ""
         processed = []
         i = 0
         while i < len(arr_text):
@@ -41,11 +42,12 @@ class DiscordChatExporterPreprocessor(Preprocessor):
                             re.search(bracket_pattern, match.group(0)).group(1)
                         ).timestamp()
                     )
-                    processed.append(
-                        f"{time_stamp} {labels[int(match.group(1) == self.username)]}{arr_text[i + 1]}"
+                    last_prefix = (
+                        f"{time_stamp} {labels[int(match.group(1) == self.username)]}"
                     )
+                    processed.append(f"{last_prefix} {arr_text[i + 1]}")
                     i += 1
-            elif processed:
-                processed[-1] += " " + line
+            elif last_prefix:
+                processed.append(f"{last_prefix} {line}")
             i += 1
         return processed
