@@ -93,7 +93,8 @@ def main():
                     chat_model.add_to_history(prompt, response)
                 else:
                     response = "<no response>"
-                print("Response: " + response)
+                print()
+                print("\n\n".join([f"Model: {resp}" for resp in response.splitlines()]))
                 print()
         case "prompt":
             if args.p is None:
