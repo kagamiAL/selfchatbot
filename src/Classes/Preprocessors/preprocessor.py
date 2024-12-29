@@ -11,7 +11,7 @@ class Preprocessor(ABC):
     COMBINE_TIME: int = 5 * 60
     BLOCK_SPLIT_TIME: int = 60 * 60
     MAXIMUM_LENGTH: int = 1024
-    MINIMUM_LENGTH: int = 100
+    MINIMUM_LENGTH: int = 75
 
     def __init__(self, params: dict):
         self.tokenizer = AutoTokenizer.from_pretrained(params["model"])
@@ -54,9 +54,9 @@ class Preprocessor(ABC):
 
     def preprocess_normalized(self, strings: list[str]) -> str:
         """Preprocesses a list of normalized strings in the format:
-        Epoch-time(in seconds and int) U: message
-        Epoch-time(in seconds and int) Y: message
-        Where U and Y are in arbitrary order
+        Epoch-time(in seconds and int) User: message
+        Epoch-time(in seconds and int) You: message
+        Where User and You are in an arbitrary order
 
         Args:
             strings (list[str]): the list of normalized strings
@@ -70,9 +70,9 @@ class Preprocessor(ABC):
         # THIS IS MESSY I KNOW
         for string in strings:
             epoch_time = int(re.search(r"\d+", string).group())
-            label = re.search(r"U|Y", string).group()
+            label = re.search(r"User|You", string).group()
             no_epoch = string.lstrip("0123456789 ")
-            raw_string = re.search(r"^[YU]:\s*(.*)", no_epoch).group(1)
+            raw_string = re.search(r"^(You|User):\s*(.*)", no_epoch).group(2)
             time_diff = epoch_time - prev_time
             if time_diff > self.BLOCK_SPLIT_TIME or not processed_data:
                 processed_data.append([])

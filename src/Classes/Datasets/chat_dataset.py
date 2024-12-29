@@ -28,7 +28,7 @@ def format_block(block_text: str, tokenizer) -> str:
     lines = block_text.splitlines()
     formatted_lines = []
     for line in lines:
-        if line.startswith(("U:", "Y:")):
+        if line.startswith(("User:", "You:")):
             formatted_lines.append(line)
         else:
             formatted_lines[-1] += f"\n{line}"

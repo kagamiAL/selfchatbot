@@ -18,12 +18,12 @@ class DiscordChatExporterPreprocessor(Preprocessor):
     def normalize(self, text: str) -> list[str]:
         # We want to create a standard format before the final step of preprocessing
         # Standard format:
-        # U and Y don't have to strictly alternate or be in the same order
-        # Epoch-time(in seconds and int) U: message
-        # Epoch-time(in seconds and int) Y: message
+        # User and You don't have to strictly alternate or be in the same order
+        # Epoch-time(in seconds and int) User: message
+        # Epoch-time(in seconds and int) You: message
         pattern = r"\[\d{4}-\d{2}-\d{2} \d{1,2}:\d{2} [AP]M\]\s+(.*)"
         bracket_pattern = r"\[(.*?)\]"
-        labels = ["U: ", "Y: "]
+        labels = ["User: ", "You: "]
         arr_text = [line.strip() for line in fp.default_cleanup(text).splitlines()]
         processed = []
         i = 0
