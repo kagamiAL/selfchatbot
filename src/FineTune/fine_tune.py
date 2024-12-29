@@ -134,12 +134,10 @@ def get_config(parameters: dict) -> AutoConfig:
     Returns:
         AutoConfig: config for fine-tuning
     """
-    if "dropout" in parameters:
+    if "config" in parameters:
         return AutoConfig.from_pretrained(
             parameters["model"],
-            resid_pdrop=parameters["dropout"],
-            embd_pdrop=parameters["dropout"],
-            attn_pdrop=parameters["dropout"],
+            **parameters["config"],
         )
     return AutoConfig.from_pretrained(parameters["model"])
 

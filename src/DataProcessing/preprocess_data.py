@@ -71,8 +71,6 @@ def generate_default_params(model_name: str, type_fine_tune: str) -> dict:
         params["lora_r"] = 32
         params["lora_alpha"] = 64
         params["lora_dropout"] = 0.05
-    else:
-        params["dropout"] = 0.1
     return params
 
 
