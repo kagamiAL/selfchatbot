@@ -36,21 +36,6 @@ class Formatter(ABC):
         """
         raise NotImplementedError
 
-    @abstractmethod
-    def format_prompt(self, packet: MessagePacket) -> str:
-        """Formats a MessagePacket to a promptable string
-
-        Args:
-            packet (MessagePacket): the packet to format
-
-        Raises:
-            NotImplementedError
-
-        Returns:
-            str: the formatted packet as a string for a prompt
-        """
-        raise NotImplementedError
-
     def format_block(self, block: list[MessagePacket]) -> str:
         """Formats a block of MessagePackets to a string
 
@@ -60,18 +45,7 @@ class Formatter(ABC):
         Returns:
             str: the formatted block as a string
         """
-        return "".join(self.format(packet) for packet in block)
-
-    def format_history(self, history: list[MessagePacket]) -> str:
-        """Formats a history of MessagePackets to a string, usually used for prompting the model with context
-
-        Args:
-            history (list[MessagePacket]): the history to format
-
-        Returns:
-            str: the formatted history as a string
-        """
-        return self.format_block(history)
+        return "".join(self.format_train(packet) for packet in block)
 
 
 def get_formatter(model_name: str, tokenizer) -> Formatter:
