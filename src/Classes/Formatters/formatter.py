@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from transformers import AutoConfig
+from Classes.TypeDicts import MessagePacket
 
 formatters: dict[str, "Formatter"] = {}
 
@@ -21,53 +22,45 @@ class Formatter(ABC):
         return [self.USER_LABEL, self.MODEL_LABEL]
 
     @abstractmethod
-    def format_train(self, text: str) -> str:
-        """Formats a piece of text to a trainable string
-        Text is in the form of
-        "label text"
+    def format_train(self, packet: MessagePacket) -> str:
+        """Formates a MessagePacket to a finetuneable string
 
         Args:
-            text (str): the text to format
+            packet (MessagePacket): the packet to format
 
         Raises:
             NotImplementedError
 
         Returns:
-            str: the formatted text
+            str: the formatted packet as a string for finetuning
         """
         raise NotImplementedError
 
     @abstractmethod
-    def format_prompt(self, text: str) -> str:
-        """Formats a piece of text to a promptable string
-        Text is in the form of
-        "label text"
+    def format_prompt(self, packet: MessagePacket) -> str:
+        """Formats a MessagePacket to a promptable string
 
         Args:
-            text (str): the text to format
+            packet (MessagePacket): the packet to format
 
         Raises:
             NotImplementedError
 
         Returns:
-            str: the formatted text
+            str: the formatted packet as a string for a prompt
         """
         raise NotImplementedError
 
-    def format_block(self, block: list[str]) -> str:
-        """Formats a block to a finetuneable string
-        Blocks are in the form of
-        [
-            "label text",
-        ]
+    def format_block(self, block: list[MessagePacket]) -> str:
+        """Formats a block of MessagePackets to a string
 
         Args:
-            block (list[str]): the block to format
+            block (list[MessagePacket]): the block to format
 
         Returns:
-            str: the formatted block
+            str: the formatted block as a string
         """
-        return "".join(self.format(line) for line in block)
+        return "".join(self.format(packet) for packet in block)
 
 
 def get_formatter(model_name: str, tokenizer) -> Formatter:
