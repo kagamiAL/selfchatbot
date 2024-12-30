@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from transformers import AutoConfig
 
-formatters: list["Formatter"] = []
+formatters: dict[str, "Formatter"] = {}
 
 
 class Formatter(ABC):
