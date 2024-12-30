@@ -13,7 +13,7 @@ class Formatter(ABC):
         self.tokenizer = tokenizer
 
     def get_labels(self) -> list[str]:
-        """Returns the labels in the format [MODEL_LABEL, USER_LABEL]
+        """Returns the labels in the format [USER_LABEL, MODEL_LABEL]
 
         Returns:
             list[str]: [USER_LABEL, MODEL_LABEL]
