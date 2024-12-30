@@ -1,12 +1,15 @@
 import re
 from transformers import AutoTokenizer
 from abc import ABC, abstractmethod
+from Classes.Formatters.formatter import Formatter, get_formatter
+from Classes.TypeDicts import MessagePacket
 
 
 class Preprocessor(ABC):
     DATA_FORMAT: str = "Default"
 
     tokenizer: AutoTokenizer
+    formatter: Formatter
 
     COMBINE_TIME: int = 5 * 60
     BLOCK_SPLIT_TIME: int = 60 * 60
@@ -15,16 +18,20 @@ class Preprocessor(ABC):
 
     def __init__(self, params: dict):
         self.tokenizer = AutoTokenizer.from_pretrained(params["model"])
+        self.formatter = get_formatter(params["model"], self.tokenizer)
 
     @abstractmethod
-    def normalize(self, text: str) -> list[str]:
-        """Normalizes a piece of text before preprocessing
+    def normalize(self, text: str) -> list[MessagePacket]:
+        """Normalizes a piece of text into a list of MessagePackets
 
         Args:
             text (str): the text to normalize
 
+        Raises:
+            NotImplementedError
+
         Returns:
-            list[str]: the normalized text split into lines
+            list[MessagePacket]: the normalized text as a list of MessagePackets
         """
         raise NotImplementedError
 
@@ -37,11 +44,7 @@ class Preprocessor(ABC):
         Returns:
             list[list[str]]: the split block(s)
         """
-        encoded = self.tokenizer.encode(
-            self.tokenizer.eos_token
-            + self.tokenizer.eos_token.join(block)
-            + self.tokenizer.eos_token
-        )
+        encoded = self.tokenizer.encode(self.formatter.format_block(block))
         length = len(encoded)
         if length < self.MINIMUM_LENGTH or len(block) == 1:
             return []
@@ -52,40 +55,43 @@ class Preprocessor(ABC):
             ) + self.__split_block_by_token_size(block[m:])
         return [block]
 
-    def preprocess_normalized(self, strings: list[str]) -> str:
-        """Preprocesses a list of normalized strings in the format:
-        Epoch-time(in seconds and int) User: message
-        Epoch-time(in seconds and int) You: message
-        Where User and You are in an arbitrary order
+    def preprocess_normalized(self, packets: list[MessagePacket]) -> str:
+        """Preprocesses a list of packets in the format:
+        {
+            "time": int,
+            "role": str,
+            "content": str
+        }
 
         Args:
-            strings (list[str]): the list of normalized strings
+            packets (list[Packet]): the packets to preprocess
 
         Returns:
             str: the preprocessed text
         """
-        processed_data: list[list[str]] = []
+        processed_data: list[list[MessagePacket]] = []
         prev_time, prev_label = 0, None
         # I DO NOT KNOW WHY THIS DOES NOT ERROR, IT JUST WORKS, IM LEAVING IT ALONE
         # THIS IS MESSY I KNOW
-        for string in strings:
-            epoch_time = int(re.search(r"\d+", string).group())
-            label = re.search(r"User|You", string).group()
-            no_epoch = string.lstrip("0123456789 ")
-            raw_string = re.search(r"^(You|User):\s*(.*)", no_epoch).group(2)
+        for packet in packets:
+            epoch_time = packet["time"]
+            label = packet["role"]
+            raw_string = packet["content"]
             time_diff = epoch_time - prev_time
             if time_diff > self.BLOCK_SPLIT_TIME or not processed_data:
                 processed_data.append([])
             if prev_label == label and time_diff < self.COMBINE_TIME:
-                processed_data[-1][-1] += f"\n{raw_string}"
+                processed_data[-1][-1]["content"] += f"\n{raw_string}"
             else:
-                processed_data[-1].append(f"{label}: {raw_string}")
+                processed_data[-1].append(packet)
             prev_time = epoch_time
             prev_label = label
         final_processed = []
         for processed in processed_data:
             final_processed += self.__split_block_by_token_size(processed)
-        return "\n\n".join(map("\n".join, final_processed))
+        return "\n\n".join(
+            self.formatter.format_block(block) for block in final_processed
+        )
 
     def preprocess(self, text: str) -> str:
         """Preprocesses a piece of text
