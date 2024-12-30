@@ -16,13 +16,30 @@ class Formatter(ABC):
         """Returns the labels in the format [MODEL_LABEL, USER_LABEL]
 
         Returns:
-            list[str]: [MODEL_LABEL, USER_LABEL]
+            list[str]: [USER_LABEL, MODEL_LABEL]
         """
-        return [self.MODEL_LABEL, self.USER_LABEL]
+        return [self.USER_LABEL, self.MODEL_LABEL]
 
     @abstractmethod
-    def format(self, text: str) -> str:
-        """Formats a piece of text to a finetuneable string
+    def format_train(self, text: str) -> str:
+        """Formats a piece of text to a trainable string
+        Text is in the form of
+        "label text"
+
+        Args:
+            text (str): the text to format
+
+        Raises:
+            NotImplementedError
+
+        Returns:
+            str: the formatted text
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def format_prompt(self, text: str) -> str:
+        """Formats a piece of text to a promptable string
         Text is in the form of
         "label text"
 
