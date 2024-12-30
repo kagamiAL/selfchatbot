@@ -2,7 +2,6 @@ from warnings import warn
 from abc import ABC, abstractmethod
 from transformers import AutoConfig
 from Classes.TypeDicts import MessagePacket
-from Classes.Formatters.gpt2_formatter import GPT2Formatter
 
 formatters: dict[str, "Formatter"] = {}
 
@@ -72,7 +71,7 @@ def get_formatter(model_name: str, tokenizer) -> Formatter:
             if architecture in formatters:
                 return formatters[architecture](tokenizer)
     warn(f"No formatter found for model {model_name}, using GPT2Formatter instead.")
-    return GPT2Formatter(tokenizer)
+    return formatters["GPT2LMHeadModel"](tokenizer)
 
 
 def register_formatter(model_name: str, formatter: Formatter):
