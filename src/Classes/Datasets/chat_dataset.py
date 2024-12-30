@@ -15,32 +15,12 @@ def get_longest_token_length(data: list[str], tokenizer) -> int:
     return max(len(tokenizer.encode(line)) for line in data)
 
 
-def format_block(block_text: str, tokenizer) -> str:
-    """Formats a chat block for the ChatDataset
-
-    Args:
-        block_text (str): The block
-        tokenizer (AutoTokenizer): The tokenizer
-
-    Returns:
-        str: The formatted block
-    """
-    lines = block_text.splitlines()
-    formatted_lines = []
-    for line in lines:
-        if line.startswith(("User:", "You:")):
-            formatted_lines.append(line)
-        else:
-            formatted_lines[-1] += f"\n{line}"
-    return f"{tokenizer.eos_token}{tokenizer.eos_token.join(formatted_lines)}{tokenizer.eos_token}"
-
-
 class ChatDataset(Dataset):
     input_ids: list[torch.tensor]
     attn_masks: list[torch.tensor]
 
     def __init__(self, text: str, tokenizer):
-        data = [format_block(block, tokenizer) for block in text.split("\n\n")]
+        data = text.split("\n\n")
         max_length = get_longest_token_length(data, tokenizer)
         self.data = data
         self.input_ids = []
