@@ -5,24 +5,20 @@ formatters: list["Formatter"] = []
 
 
 class Formatter(ABC):
-
     MODEL_NAME: str
+    MODEL_LABEL: str
+    USER_LABEL: str
 
-    model_label: str
-    user_label: str
-
-    def __init__(self, model_label: str, user_label: str, tokenizer):
+    def __init__(self, tokenizer):
         self.tokenizer = tokenizer
-        self.model_label = model_label
-        self.user_label = user_label
 
     def get_labels(self) -> list[str]:
-        """Returns the labels in the format [model_label, user_label]
+        """Returns the labels in the format [MODEL_LABEL, USER_LABEL]
 
         Returns:
-            list[str]: [model_label, user_label]
+            list[str]: [MODEL_LABEL, USER_LABEL]
         """
-        return [self.model_label, self.user_label]
+        return [self.MODEL_LABEL, self.USER_LABEL]
 
     @abstractmethod
     def format(self, text: str) -> str:
