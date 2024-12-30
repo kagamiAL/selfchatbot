@@ -5,6 +5,19 @@ from typing import override
 from dateutil import parser
 
 
+def remove_meta_section(text: str) -> str:
+    """Remove the meta section from a DiscordChatExporter export
+
+    Args:
+        text (str): the text to remove the meta section from
+
+    Returns:
+        str: the text with the meta section removed
+    """
+    pattern = r"=+\n.*?\n=+\n"
+    return re.sub(pattern, "", text)
+
+
 class DiscordChatExporterPreprocessor(Preprocessor):
     DATA_FORMAT: str = "DiscordChatExporter"
     username: str
@@ -23,8 +36,10 @@ class DiscordChatExporterPreprocessor(Preprocessor):
         # Epoch-time(in seconds and int) You: message
         pattern = r"\[\d{4}-\d{2}-\d{2} \d{1,2}:\d{2} [AP]M\]\s+(.*)"
         bracket_pattern = r"\[(.*?)\]"
-        labels = ["User:", "You:"]
-        arr_text = [line.strip() for line in fp.default_cleanup(text).splitlines()]
+        arr_text = [
+            line.strip()
+            for line in fp.default_cleanup(remove_meta_section(text)).splitlines()
+        ]
         last_prefix: str = ""
         processed = []
         i = 0
