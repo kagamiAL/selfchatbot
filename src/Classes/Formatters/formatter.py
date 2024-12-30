@@ -62,6 +62,17 @@ class Formatter(ABC):
         """
         return "".join(self.format(packet) for packet in block)
 
+    def format_history(self, history: list[MessagePacket]) -> str:
+        """Formats a history of MessagePackets to a string, usually used for prompting the model with context
+
+        Args:
+            history (list[MessagePacket]): the history to format
+
+        Returns:
+            str: the formatted history as a string
+        """
+        return self.format_block(history)
+
 
 def get_formatter(model_name: str, tokenizer) -> Formatter:
     """Returns a formatter for a given model name
