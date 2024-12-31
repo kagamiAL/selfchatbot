@@ -67,10 +67,13 @@ def generate_default_params(model_name: str, type_fine_tune: str) -> dict:
         "weight_decay": 0.01,
         "dataset_split": 0.8,
     }
-    if type_fine_tune == "lora":
+    if type_fine_tune == "lora" or type_fine_tune == "qlora":
         params["lora_r"] = 32
         params["lora_alpha"] = 64
         params["lora_dropout"] = 0.05
+    if type_fine_tune == "qlora":
+        params["gradient_accumulation_steps"] = 8
+        params["bit_quantization"] = 4
     return params
 
 
@@ -156,7 +159,7 @@ def main():
         default="lora",
         const="lora",
         nargs="?",
-        choices=["finetune", "lora"],
+        choices=["finetune", "lora", "qlora"],
         help="The type of fine-tuning to use",
     )
     args = parser.parse_args()
