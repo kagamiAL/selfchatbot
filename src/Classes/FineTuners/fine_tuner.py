@@ -1,5 +1,6 @@
 import torch
 from pathlib import Path
+from torch.cuda.amp import autocast, GradScaler
 
 
 def printProgressBar(
@@ -66,6 +67,7 @@ class FineTuner:
     def __init__(
         self,
         model,
+        parameters,
         optimizer,
         scheduler,
         save_path,
@@ -74,12 +76,17 @@ class FineTuner:
     ):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model = model.to(self.device)
+        self.parameters = parameters
         self.save_path = save_path
         self.train_dataloader = train_dataloader
         self.val_dataloader = val_dataloader
         self.optimizer = optimizer
         self.scheduler = scheduler
         self.patience_counter = 0
+        self.qlora = self.parameters["type_fine_tune"] == "qlora"
+        if self.qlora:
+            self.scaler = GradScaler(self.device)
+            self.accumulation_steps = self.parameters["gradient_accumulation_steps"]
 
     def train_step(self, batch: tuple[torch.tensor, torch.tensor]) -> float:
         """A single training step
@@ -122,7 +129,85 @@ class FineTuner:
         # Return the loss for monitoring
         return t_loss.item()
 
-    def get_avg_val_loss(self) -> int:
+    def train_step_q_lora(
+        self, step: int, batch: tuple[torch.tensor, torch.tensor]
+    ) -> float:
+        """A single training step for Q-Lora
+
+        Args:
+            step (int): The current step number
+            batch (tuple[torch.tensor, torch.tensor]): The batch
+
+        Returns:
+            float: The loss
+        """
+        t_input_ids = batch[0].to(self.device)
+        t_labels = batch[0].to(self.device)
+        t_attn_mask = batch[1].to(self.device)
+
+        self.optimizer.zero_grad()
+
+        with autocast(self.device):
+            t_outputs = self.model(
+                input_ids=t_input_ids,
+                labels=t_labels,
+                attention_mask=t_attn_mask,
+            )
+            t_loss = t_outputs.loss
+
+        self.scaler(t_loss).backward()
+
+        if (step + 1) % self.accumulation_steps == 0:
+            self.scaler.step(self.optimizer)
+            self.scaler.update()
+            self.optimizer.zero_grad()
+
+        self.scheduler.step()
+
+        return t_loss.item()
+
+    def final_step_q_lora(self, step: int):
+        """A final step for Q-Lora
+
+        Args:
+            step (int): The current step number
+        """
+        if (step + 1) % self.accumulation_steps != 0:
+            self.scaler.step(self.optimizer)
+            self.scaler.update()
+            self.optimizer.zero_grad()
+            self.scheduler.step()
+
+    def train_epoch(self, epoch: int) -> float:
+        """Perform a single epoch of training
+
+        Args:
+            epoch (int): The current epoch number
+
+        Returns:
+            float: The average training loss
+        """
+        total_train_loss = 0.0
+        train_size = len(self.train_dataloader)
+        for step, batch in enumerate(self.train_dataloader):
+            printProgressBar(
+                step + 1,
+                train_size,
+                prefix=f"Epoch: {
+                    epoch + 1}",
+                suffix=f"{step + 1}/{train_size}",
+            )
+            loss = (
+                self.train_step_q_lora(step, batch)
+                if self.qlora
+                else self.train_step(batch)
+            )
+            total_train_loss += loss
+        if self.qlora:
+            self.final_step_q_lora(step)
+        return total_train_loss / train_size
+
+    def get_avg_val_loss(self) -> float:
         """Get the average validation loss
 
         Returns:
@@ -144,31 +229,20 @@ class FineTuner:
                 total_val_loss += v_loss.item()
         return total_val_loss / len(self.val_dataloader)
 
-    def fine_tune(self, epochs: int):
+    def fine_tune(self):
         """Fine tune the model
 
         Args:
             epochs (int): The number of epochs
         """
-        train_size = len(self.train_dataloader)
         best_loss = 1e9
         best_path, final_path = get_best_and_final_path(self.save_path)
         open(self.save_path.joinpath("log.txt"), "w").close()
-        for epoch in range(epochs):
+        for epoch in range(self.parameters["epochs"]):
             self.model.train()
-            total_train_loss = 0.0
-            for step, batch in enumerate(self.train_dataloader):
-                printProgressBar(
-                    step + 1,
-                    train_size,
-                    prefix=f"Epoch: {
-                        epoch + 1}",
-                    suffix=f"{step + 1}/{train_size}",
-                )
-                loss = self.train_step(batch)
-                total_train_loss += loss
+            train_loss = self.train_epoch(epoch)
             val_loss = self.get_avg_val_loss()
-            result_string = f"Epoch: {epoch + 1}, Train Loss: {total_train_loss / train_size}, Validation Loss: {val_loss}"
+            result_string = f"Epoch: {epoch + 1}, Train Loss: {train_loss}, Validation Loss: {val_loss}"
             print(result_string)
             if val_loss < best_loss:
                 best_loss = val_loss
