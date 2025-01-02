@@ -17,6 +17,7 @@ dependencies = [
     "peft",  # Latest version
     "protobuf",
     "sentencepiece",
+    "bitsandbytes",
 ]
 requires-python = ">=3.12"
 
