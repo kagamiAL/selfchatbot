@@ -75,6 +75,7 @@ class FineTuner:
         val_dataloader,
         fp16=False,
         gradient_accumulation_steps=1,
+        max_norm=1.0,
     ):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model = model.to(self.device)
@@ -85,9 +86,31 @@ class FineTuner:
         self.scheduler = scheduler
         self.patience_counter = 0
         self.fp16 = fp16
+        self.max_norm = max_norm
         self.gradient_accumulation_steps = gradient_accumulation_steps
         if self.fp16:
             self.scaler = GradScaler(self.device)
+
+    def apply_gradients_and_step(self):
+        """Apply gradients and take an optimization step.
+
+        This function applies the gradients accumulated in the optimizer, steps the
+        learning rate scheduler, and zeros the gradients. If using mixed precision
+        (fp16), it also updates the gradient scaler.
+
+        """
+        if self.fp16:
+            # Step the optimizer
+            self.scaler.step(self.optimizer)
+            # Update the scaler
+            self.scaler.update()
+        else:
+            # Step the optimizer
+            self.optimizer.step()
+        # Step the learning rate scheduler
+        self.scheduler.step()
+        # Zero the gradients
+        self.optimizer.zero_grad()
 
     def train_step(self, step: int, batch: tuple[torch.tensor, torch.tensor]) -> float:
         """A single training step
@@ -124,17 +147,11 @@ class FineTuner:
 
         if (step + 1) % self.gradient_accumulation_steps == 0:
             if self.fp16:
-                # Step the optimizer
-                self.scaler.step(self.optimizer)
-                # Update the scaler
-                self.scaler.update()
-            else:
-                # Step the optimizer
-                self.optimizer.step()
-            # Step the learning rate scheduler
-            self.scheduler.step()
-            # Zero the gradients
-            self.optimizer.zero_grad()
+                # Unscale if using fp16
+                self.scaler.unscale_(self.optimizer)
+            # Clip the gradients to avoid gradient explosion
+            torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.max_norm)
+            self.apply_gradients_and_step()
 
         # Return the loss for monitoring
         return t_loss.item()
@@ -146,17 +163,7 @@ class FineTuner:
             step (int): The current step number
         """
         if (step + 1) % self.gradient_accumulation_steps != 0:
-            if self.fp16:
-                # Update model weights with accumulated gradients
-                self.scaler.step(self.optimizer)
-                # Update the scaler
-                self.scaler.update()
-            else:
-                self.optimizer.step()
-            # Step the learning rate scheduler
-            self.scheduler.step()
-            # Zero the gradients
-            self.optimizer.zero_grad()
+            self.apply_gradients_and_step()
 
     def train_epoch(self, epoch: int) -> float:
         """Perform a single epoch of training
