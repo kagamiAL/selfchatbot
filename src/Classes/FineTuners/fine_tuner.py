@@ -1,6 +1,7 @@
 import torch
 from pathlib import Path
 from torch.cuda.amp import autocast, GradScaler
+from contextlib import nullcontext
 
 
 def printProgressBar(
@@ -67,28 +68,28 @@ class FineTuner:
     def __init__(
         self,
         model,
-        parameters,
         optimizer,
         scheduler,
         save_path,
         train_dataloader,
         val_dataloader,
+        fp16=False,
+        gradient_accumulation_steps=0,
     ):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model = model.to(self.device)
-        self.parameters = parameters
         self.save_path = save_path
         self.train_dataloader = train_dataloader
         self.val_dataloader = val_dataloader
         self.optimizer = optimizer
         self.scheduler = scheduler
         self.patience_counter = 0
-        self.qlora = self.parameters["type_fine_tune"] == "qlora"
-        if self.qlora:
+        self.fp16 = fp16
+        self.gradient_accumulation_steps = gradient_accumulation_steps
+        if self.gradient_accumulation_steps > 1:
             self.scaler = GradScaler(self.device)
-            self.accumulation_steps = self.parameters["gradient_accumulation_steps"]
 
-    def train_step(self, batch: tuple[torch.tensor, torch.tensor]) -> float:
+    def train_step(self, step: int, batch: tuple[torch.tensor, torch.tensor]) -> float:
         """A single training step
 
         Args:
@@ -99,29 +100,42 @@ class FineTuner:
         """
         # Prepare the inputs
         t_input_ids = batch[0].to(self.device)
-        t_labels = batch[0].to(
-            self.device
-        )  # Labels for GPT-2 are usually the same as inputs
+        t_labels = batch[0].to(self.device)
         t_attn_mask = batch[1].to(self.device)
 
         # Clear gradients from the previous step
         self.optimizer.zero_grad()
 
-        # Forward pass
-        t_outputs = self.model(
-            input_ids=t_input_ids,
-            labels=t_labels,
-            attention_mask=t_attn_mask,
-        )
+        with autocast(self.device) if self.fp16 else nullcontext():
+            # Forward pass
+            t_outputs = self.model(
+                input_ids=t_input_ids,
+                labels=t_labels,
+                attention_mask=t_attn_mask,
+            )
 
-        # Compute the loss
-        t_loss = t_outputs.loss
+            # Compute the loss
+            t_loss = t_outputs.loss
 
-        # Backpropagate the gradients
-        t_loss.backward()
+        if self.gradient_accumulation_steps > 1:
+            # Scale the loss and backpropagate
+            self.scaler.scale(t_loss).backward()
 
-        # Step the optimizer
-        self.optimizer.step()
+            if (step + 1) % self.gradient_accumulation_steps == 0:
+                # Step the optimizer
+                self.scaler.step(self.optimizer)
+
+                # Update the scaler
+                self.scaler.update()
+
+                # Zero the gradients
+                self.optimizer.zero_grad()
+        else:
+            # Backpropagate the gradients
+            t_loss.backward()
+
+            # Step the optimizer
+            self.optimizer.step()
 
         # Step the learning rate scheduler (if applicable)
         self.scheduler.step()
@@ -129,54 +143,19 @@ class FineTuner:
         # Return the loss for monitoring
         return t_loss.item()
 
-    def train_step_q_lora(
-        self, step: int, batch: tuple[torch.tensor, torch.tensor]
-    ) -> float:
-        """A single training step for Q-Lora
-
-        Args:
-            step (int): The current step number
-            batch (tuple[torch.tensor, torch.tensor]): The batch
-
-        Returns:
-            float: The loss
-        """
-        t_input_ids = batch[0].to(self.device)
-        t_labels = batch[0].to(self.device)
-        t_attn_mask = batch[1].to(self.device)
-
-        self.optimizer.zero_grad()
-
-        with autocast(self.device):
-            t_outputs = self.model(
-                input_ids=t_input_ids,
-                labels=t_labels,
-                attention_mask=t_attn_mask,
-            )
-            t_loss = t_outputs.loss
-
-        self.scaler(t_loss).backward()
-
-        if (step + 1) % self.accumulation_steps == 0:
-            self.scaler.step(self.optimizer)
-            self.scaler.update()
-            self.optimizer.zero_grad()
-
-        self.scheduler.step()
-
-        return t_loss.item()
-
-    def final_step_q_lora(self, step: int):
-        """A final step for Q-Lora
+    def gradient_accumulation_final_update(self, step: int):
+        """Final update for gradient accumulation
 
         Args:
             step (int): The current step number
         """
-        if (step + 1) % self.accumulation_steps != 0:
-            self.scaler.step(self.optimizer)
-            self.scaler.update()
-            self.optimizer.zero_grad()
-            self.scheduler.step()
+        if (step + 1) % self.gradient_accumulation_steps != 0:
+            self.scaler.step(
+                self.optimizer
+            )  # Update model weights with accumulated gradients
+            self.scaler.update()  # Update the scaler
+            self.optimizer.zero_grad()  # Clear gradients for the next step
+            self.scheduler.step()  # Step the learning rate scheduler
 
     def train_epoch(self, epoch: int) -> float:
         """Perform a single epoch of training
@@ -197,14 +176,10 @@ class FineTuner:
                     epoch + 1}",
                 suffix=f"{step + 1}/{train_size}",
             )
-            loss = (
-                self.train_step_q_lora(step, batch)
-                if self.qlora
-                else self.train_step(batch)
-            )
+            loss = self.train_step(step, batch)
             total_train_loss += loss
-        if self.qlora:
-            self.final_step_q_lora(step)
+        if self.gradient_accumulation_steps > 1:
+            self.gradient_accumulation_final_update(step)
         return total_train_loss / train_size
 
     def get_avg_val_loss(self) -> float:
