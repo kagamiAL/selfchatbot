@@ -74,7 +74,7 @@ class FineTuner:
         train_dataloader,
         val_dataloader,
         fp16=False,
-        gradient_accumulation_steps=0,
+        gradient_accumulation_steps=1,
     ):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model = model.to(self.device)
@@ -86,7 +86,7 @@ class FineTuner:
         self.patience_counter = 0
         self.fp16 = fp16
         self.gradient_accumulation_steps = gradient_accumulation_steps
-        if self.gradient_accumulation_steps > 1:
+        if self.fp16:
             self.scaler = GradScaler(self.device)
 
     def train_step(self, step: int, batch: tuple[torch.tensor, torch.tensor]) -> float:
@@ -103,9 +103,6 @@ class FineTuner:
         t_labels = batch[0].to(self.device)
         t_attn_mask = batch[1].to(self.device)
 
-        # Clear gradients from the previous step
-        self.optimizer.zero_grad()
-
         with autocast(self.device) if self.fp16 else nullcontext():
             # Forward pass
             t_outputs = self.model(
@@ -113,32 +110,31 @@ class FineTuner:
                 labels=t_labels,
                 attention_mask=t_attn_mask,
             )
-
             # Compute the loss
             t_loss = t_outputs.loss
+            # Divide the loss by the gradient accumulation steps to account for the accumulated gradients
+            t_loss /= self.gradient_accumulation_steps
 
-        if self.gradient_accumulation_steps > 1:
-            # Scale the loss and backpropagate
+        if self.fp16:
+            # Scale the loss for backpropagation if using fp16
             self.scaler.scale(t_loss).backward()
-
-            if (step + 1) % self.gradient_accumulation_steps == 0:
-                # Step the optimizer
-                self.scaler.step(self.optimizer)
-
-                # Update the scaler
-                self.scaler.update()
-
-                # Zero the gradients
-                self.optimizer.zero_grad()
         else:
             # Backpropagate the gradients
             t_loss.backward()
 
-            # Step the optimizer
-            self.optimizer.step()
-
-        # Step the learning rate scheduler (if applicable)
-        self.scheduler.step()
+        if (step + 1) % self.gradient_accumulation_steps == 0:
+            if self.fp16:
+                # Step the optimizer
+                self.scaler.step(self.optimizer)
+                # Update the scaler
+                self.scaler.update()
+            else:
+                # Step the optimizer
+                self.optimizer.step()
+            # Step the learning rate scheduler
+            self.scheduler.step()
+            # Zero the gradients
+            self.optimizer.zero_grad()
 
         # Return the loss for monitoring
         return t_loss.item()
@@ -150,12 +146,17 @@ class FineTuner:
             step (int): The current step number
         """
         if (step + 1) % self.gradient_accumulation_steps != 0:
-            self.scaler.step(
-                self.optimizer
-            )  # Update model weights with accumulated gradients
-            self.scaler.update()  # Update the scaler
-            self.optimizer.zero_grad()  # Clear gradients for the next step
-            self.scheduler.step()  # Step the learning rate scheduler
+            if self.fp16:
+                # Update model weights with accumulated gradients
+                self.scaler.step(self.optimizer)
+                # Update the scaler
+                self.scaler.update()
+            else:
+                self.optimizer.step()
+            # Step the learning rate scheduler
+            self.scheduler.step()
+            # Zero the gradients
+            self.optimizer.zero_grad()
 
     def train_epoch(self, epoch: int) -> float:
         """Perform a single epoch of training
@@ -178,8 +179,7 @@ class FineTuner:
             )
             loss = self.train_step(step, batch)
             total_train_loss += loss
-        if self.gradient_accumulation_steps > 1:
-            self.gradient_accumulation_final_update(step)
+        self.gradient_accumulation_final_update(step)
         return total_train_loss / train_size
 
     def get_avg_val_loss(self) -> float:
