@@ -21,7 +21,7 @@ class ChatDataset(Dataset):
 
     def __init__(self, text: str, tokenizer):
         data = text.split("\n\n")
-        self.max_length = get_longest_token_length(data, tokenizer)
+        max_length = get_longest_token_length(data, tokenizer)
         self.data = data
         self.input_ids = []
         self.attn_masks = []
@@ -31,7 +31,7 @@ class ChatDataset(Dataset):
                 prompt,
                 truncation=True,
                 padding="max_length",
-                max_length=self.max_length,  # Max tokens allowed
+                max_length=max_length,  # Max tokens allowed
                 return_tensors="pt",
             )
             self.input_ids.append(encodings["input_ids"])

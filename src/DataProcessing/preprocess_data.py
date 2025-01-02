@@ -48,7 +48,9 @@ def get_json_data(data_format_path: str, model: str) -> Optional[dict]:
     return json_data
 
 
-def generate_default_params(model_name: str, type_fine_tune: str) -> dict:
+def generate_default_params(
+    model_name: str, type_fine_tune: str, max_length: int
+) -> dict:
     """Generate default parameters for fine-tuning
 
     Args:
@@ -60,6 +62,7 @@ def generate_default_params(model_name: str, type_fine_tune: str) -> dict:
     params = {
         "model": model_name,
         "type_fine_tune": type_fine_tune,
+        "max_length": max_length,
         "batch_size": 8,
         "learning_rate": 5e-5,
         "warmup_steps_percent": 0.05,
@@ -85,6 +88,7 @@ def preprocess_data(args: argparse.Namespace):
     """
     dataset_id = args.d
     model = args.m
+    max_length = 1024
     dataset_path, dataset_name = get_path_to_dataset_and_name(
         "selfChatBot_raw", dataset_id
     )
@@ -96,6 +100,7 @@ def preprocess_data(args: argparse.Namespace):
         preprocessor: Preprocessor = preprocessors[data_format](
             get_json_data(format_path, model)
         )
+        max_length = max(max_length, preprocessor.MAXIMUM_LENGTH)
         for file in os.listdir(format_path):
             if not file.endswith(".txt"):
                 continue
@@ -111,7 +116,7 @@ def preprocess_data(args: argparse.Namespace):
         f.write("\n\n".join(processed_text))
     with open(osp.join(directory_path, "parameters.json"), "w") as f:
         json.dump(
-            generate_default_params(model, args.t),
+            generate_default_params(model, args.t, max_length),
             f,
             indent="\t",
             separators=(",", ": "),

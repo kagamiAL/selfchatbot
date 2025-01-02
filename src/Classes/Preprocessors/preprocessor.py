@@ -19,6 +19,7 @@ class Preprocessor(ABC):
     def __init__(self, params: dict):
         self.tokenizer = AutoTokenizer.from_pretrained(params["model"])
         self.formatter = get_formatter(params["model"], self.tokenizer)
+        self.MAXIMUM_LENGTH = min(self.MAXIMUM_LENGTH, self.tokenizer.model_max_length)
 
     @abstractmethod
     def normalize(self, text: str) -> list[MessagePacket]:
