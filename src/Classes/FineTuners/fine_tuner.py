@@ -211,7 +211,7 @@ class FineTuner:
                 total_val_loss += v_loss.item()
         return total_val_loss / len(self.val_dataloader)
 
-    def fine_tune(self):
+    def fine_tune(self, epochs: int):
         """Fine tune the model
 
         Args:
@@ -220,7 +220,7 @@ class FineTuner:
         best_loss = 1e9
         best_path, final_path = get_best_and_final_path(self.save_path)
         open(self.save_path.joinpath("log.txt"), "w").close()
-        for epoch in range(self.parameters["epochs"]):
+        for epoch in range(epochs):
             self.model.train()
             train_loss = self.train_epoch(epoch)
             val_loss = self.get_avg_val_loss()
