@@ -196,6 +196,7 @@ def fine_tuning_loop(dataset_id: int):
         "selfChatBot_preprocessed", dataset_id
     )
     parameters = get_params(dataset_path)
+    # TODO: I'll move this into the FineTuner class later
     model = get_model(parameters)
     chat_dataset = ChatDataset(
         get_corpora(dataset_path),
@@ -222,6 +223,14 @@ def fine_tuning_loop(dataset_id: int):
         num_training_steps=total_steps,
     )
     save_path = Path(osp.join(env["selfChatBot_results"], dataset_name))
+    q_lora_args = (
+        {
+            "fp16": True,
+            "gradient_accumulation_steps": parameters["gradient_accumulation_steps"],
+        }
+        if parameters["type_fine_tune"] == "qlora"
+        else {}
+    )
     save_path.mkdir(parents=True, exist_ok=True)
     save_default_generation_params(save_path, parameters)
     with open(save_path.joinpath("debug.json"), "w") as f:
@@ -233,6 +242,7 @@ def fine_tuning_loop(dataset_id: int):
         save_path=save_path,
         train_dataloader=train_dataloader,
         val_dataloader=val_dataloader,
+        **q_lora_args,
     )
     finetuner.fine_tune(parameters["epochs"])
 
