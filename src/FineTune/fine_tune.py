@@ -11,12 +11,13 @@ from transformers import (
     AutoTokenizer,
     AutoConfig,
     Conv1D,
+    BitsAndBytesConfig,
     get_linear_schedule_with_warmup,
 )
 from Classes.FineTuners.fine_tuner import FineTuner
 from Classes.Datasets.chat_dataset import ChatDataset
 from DataProcessing.preprocess_data import get_path_to_dataset_and_name
-from peft import get_peft_model, LoraConfig, TaskType
+from peft import get_peft_model, LoraConfig, TaskType, prepare_model_for_kbit_training
 
 
 def get_specific_layer_names(model: AutoModelForCausalLM) -> list[str]:
@@ -177,11 +178,28 @@ def get_model(parameters: dict) -> AutoModelForCausalLM:
     Returns:
         AutoModelForCausalLM: model for fine-tuning
     """
-    model = AutoModelForCausalLM.from_pretrained(
-        parameters["model"],
-        config=get_config(parameters),
-    )
-    if parameters["type_fine_tune"] == "lora":
+    model: AutoModelForCausalLM
+    if parameters["type_fine_tune"] == "qlora":
+        bnb_config = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_compute_dtype=torch.bfloat16,
+            bnb_4bit_use_double_quant=True,
+            bnb_4bit_quant_type="nf4",
+        )
+        model = AutoModelForCausalLM.from_pretrained(
+            parameters["model"], quantization_config=bnb_config
+        )
+        model.gradient_checkpointing_enable()
+        model = prepare_model_for_kbit_training(model)
+    else:
+        model = AutoModelForCausalLM.from_pretrained(
+            parameters["model"],
+            config=get_config(parameters),
+        )
+    if (
+        parameters["type_fine_tune"] == "lora"
+        or parameters["type_fine_tune"] == "qlora"
+    ):
         return get_peft_model(model, get_lora_config(parameters, model))
     return model
 
@@ -244,6 +262,7 @@ def fine_tuning_loop(dataset_id: int):
         val_dataloader=val_dataloader,
         **q_lora_args,
     )
+    model.config.use_cache = False
     finetuner.fine_tune(parameters["epochs"])
 
 
