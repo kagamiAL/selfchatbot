@@ -100,7 +100,7 @@ def get_corpora(dataset_path: str) -> str:
         return f.read()
 
 
-def save_default_generation_params(save_path: Path, parameters: dict):
+def save_default_generation_params(save_path: Path, parameters: dict, max_length: int):
     """Saves the default generation parameters if they don't exist
 
     Args:
@@ -113,7 +113,7 @@ def save_default_generation_params(save_path: Path, parameters: dict):
                 {
                     "model": parameters["model"],
                     "type_fine_tune": parameters["type_fine_tune"],
-                    "max_length": 1024,
+                    "max_length": max_length,
                     "temperature": 0.8,
                     "top_p": 0.85,
                     "top_k": 50,
@@ -250,7 +250,7 @@ def fine_tuning_loop(dataset_id: int):
         else {}
     )
     save_path.mkdir(parents=True, exist_ok=True)
-    save_default_generation_params(save_path, parameters)
+    save_default_generation_params(save_path, parameters, chat_dataset.max_length)
     with open(save_path.joinpath("debug.json"), "w") as f:
         json.dump(parameters, f, indent="\t", separators=(",", ": "))
     finetuner = FineTuner(
