@@ -1,6 +1,5 @@
 import torch
 from pathlib import Path
-from torch.cuda.amp import autocast, GradScaler
 from contextlib import nullcontext
 
 
@@ -89,7 +88,7 @@ class FineTuner:
         self.max_norm = max_norm
         self.gradient_accumulation_steps = gradient_accumulation_steps
         if self.fp16:
-            self.scaler = GradScaler(self.device)
+            self.scaler = torch.GradScaler(self.device)
 
     def apply_gradients_and_step(self):
         """Apply gradients and take an optimization step.
@@ -126,7 +125,7 @@ class FineTuner:
         t_labels = batch[0].to(self.device)
         t_attn_mask = batch[1].to(self.device)
 
-        with autocast(self.device) if self.fp16 else nullcontext():
+        with torch.autocast(device_type=self.device) if self.fp16 else nullcontext():
             # Forward pass
             t_outputs = self.model(
                 input_ids=t_input_ids,
