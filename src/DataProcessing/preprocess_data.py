@@ -74,7 +74,6 @@ def generate_default_params(model_name: str, type_fine_tune: str) -> dict:
     if type_fine_tune == "qlora":
         params["batch_size"] = 1
         params["gradient_accumulation_steps"] = 8
-        params["bit_quantization"] = 4
     return params
 
 
