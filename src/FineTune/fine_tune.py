@@ -196,7 +196,7 @@ def fine_tuning_loop(dataset_id: int):
         "selfChatBot_preprocessed", dataset_id
     )
     parameters = get_params(dataset_path)
-    # TODO: I'll move this into the FineTuner class later
+    # TODO: This is just me learning how to make my own training loop, I will use huggingface's more advanced training loop later
     model = get_model(parameters)
     chat_dataset = ChatDataset(
         get_corpora(dataset_path),
