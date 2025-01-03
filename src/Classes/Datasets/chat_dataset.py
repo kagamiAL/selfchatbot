@@ -34,8 +34,8 @@ class ChatDataset(Dataset):
                 max_length=max_length,  # Max tokens allowed
                 return_tensors="pt",
             )
-            self.input_ids.append(encodings["input_ids"])
-            self.attn_masks.append(encodings["attention_mask"])
+            self.input_ids.append(torch.squeeze(encodings["input_ids"], 0))
+            self.attn_masks.append(torch.squeeze(encodings["attention_mask"], 0))
 
     def __len__(self):
         return len(self.data)
