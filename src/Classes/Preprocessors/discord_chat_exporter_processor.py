@@ -21,7 +21,7 @@ def remove_meta_section(text: str) -> str:
 
 class DiscordChatExporterPreprocessor(Preprocessor):
     DATA_FORMAT: str = "DiscordChatExporter"
-    SCHEMA: dict = {
+    PREPROCESSOR_DATA_SCHEMA: dict = {
         "$id": "Schema/DiscordChatExporter.json",
         "type": "object",
         "properties": {

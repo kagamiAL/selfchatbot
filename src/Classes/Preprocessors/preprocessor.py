@@ -11,7 +11,7 @@ class Preprocessor(ABC):
     tokenizer: AutoTokenizer
     formatter: Formatter
 
-    SCHEMA: Optional[dict] = None
+    PREPROCESSOR_DATA_SCHEMA: Optional[dict] = None
     COMBINE_TIME: int = 5 * 60
     BLOCK_SPLIT_TIME: int = 60 * 60
     MAXIMUM_LENGTH: int = 1024
