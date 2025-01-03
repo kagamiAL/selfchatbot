@@ -1,6 +1,6 @@
-import re
 from transformers import AutoTokenizer
 from abc import ABC, abstractmethod
+from typing import Optional
 from Classes.Formatters.formatter import Formatter, get_formatter
 from Classes.TypeDicts import MessagePacket
 
@@ -11,6 +11,7 @@ class Preprocessor(ABC):
     tokenizer: AutoTokenizer
     formatter: Formatter
 
+    SCHEMA: Optional[dict] = None
     COMBINE_TIME: int = 5 * 60
     BLOCK_SPLIT_TIME: int = 60 * 60
     MAXIMUM_LENGTH: int = 1024
@@ -19,6 +20,7 @@ class Preprocessor(ABC):
     def __init__(self, params: dict):
         self.tokenizer = AutoTokenizer.from_pretrained(params["model"])
         self.formatter = get_formatter(params["model"], self.tokenizer)
+        self.MAXIMUM_LENGTH = params["max_length"]
         self.MAXIMUM_LENGTH = min(self.MAXIMUM_LENGTH, self.tokenizer.model_max_length)
 
     @abstractmethod
