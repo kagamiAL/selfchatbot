@@ -21,12 +21,23 @@ def remove_meta_section(text: str) -> str:
 
 class DiscordChatExporterPreprocessor(Preprocessor):
     DATA_FORMAT: str = "DiscordChatExporter"
+    SCHEMA: dict = {
+        "$id": "Schema/DiscordChatExporter.json",
+        "type": "object",
+        "properties": {
+            "username": {"type": "string"},
+        },
+        "required": ["username"],
+        "additionalProperties": False,
+    }
+
     username: str
 
     @override
     def __init__(self, params: dict):
         super().__init__(params)
-        self.username = params["username"]
+        discord_chat_exporter_data = params["preprocessor_data"][self.DATA_FORMAT]
+        self.username = discord_chat_exporter_data["username"]
 
     @override
     def normalize(self, text: str) -> list[MessagePacket]:
