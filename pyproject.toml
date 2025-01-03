@@ -10,14 +10,15 @@ authors = [{ name = "Alan Bach", email = "bachalan330@gmail.com" }]
 readme = "README.md"
 license = { text = "MIT" }
 dependencies = [
-    "torch",  # Latest version
-    "transformers",  # Latest version
-    "emoji",  # Latest version
-    "python-dateutil",  # Latest version
-    "peft",  # Latest version
+    "torch",
+    "transformers",
+    "emoji",
+    "python-dateutil",
+    "peft",
     "protobuf",
     "sentencepiece",
     "bitsandbytes",
+    "jsonschema",
 ]
 requires-python = ">=3.12"
 
