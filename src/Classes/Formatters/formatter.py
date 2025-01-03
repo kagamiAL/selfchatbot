@@ -23,30 +23,19 @@ class Formatter(ABC):
         return [self.USER_LABEL, self.MODEL_LABEL]
 
     @abstractmethod
-    def format_train(self, packet: MessagePacket) -> str:
-        """Formates a MessagePacket to a finetuneable string
-
-        Args:
-            packet (MessagePacket): the packet to format
-
-        Raises:
-            NotImplementedError
-
-        Returns:
-            str: the formatted packet as a string for finetuning
-        """
-        raise NotImplementedError
-
     def format_block(self, block: list[MessagePacket]) -> str:
         """Formats a block of MessagePackets to a string
 
         Args:
             block (list[MessagePacket]): the block to format
 
+        Raises:
+            NotImplementedError
+
         Returns:
             str: the formatted block as a string
         """
-        return "".join(self.format_train(packet) for packet in block)
+        raise NotImplementedError
 
 
 def get_formatter(model_name: str, tokenizer) -> Formatter:
@@ -69,9 +58,9 @@ def get_formatter(model_name: str, tokenizer) -> Formatter:
     if architectures:
         for architecture in architectures:
             if architecture in formatters:
+                warn(f"Using formatter for architecture {architecture}")
                 return formatters[architecture](tokenizer)
-    warn(f"No formatter found for model {model_name}, using GPT2Formatter instead.")
-    return formatters["GPT2LMHeadModel"](tokenizer)
+    return formatters["Default"](tokenizer)
 
 
 def register_formatter(model_name: str, formatter: Formatter):
