@@ -11,6 +11,7 @@ class Preprocessor(ABC):
     tokenizer: AutoTokenizer
     formatter: Formatter
 
+    # Optional schema for extra parameters that the preprocessor can use in the parameters.json file
     PREPROCESSOR_DATA_SCHEMA: Optional[dict] = None
     COMBINE_TIME: int = 5 * 60
     BLOCK_SPLIT_TIME: int = 60 * 60

@@ -4,9 +4,9 @@ import os
 import os.path as osp
 from os import environ as env
 import json
-from typing import Optional
 from pathlib import Path
 from Classes.Preprocessors.preprocessor import Preprocessor
+from Classes.Schema import validate_json, schemas
 
 preprocessors: dict[str, Preprocessor] = {}
 
@@ -29,23 +29,19 @@ def get_path_to_dataset_and_name(variable: str, dataset_id: int) -> tuple[str, s
     raise FileNotFoundError(f"Dataset with ID {dataset_id} not found")
 
 
-def get_json_data(data_format_path: str, model: str) -> Optional[dict]:
-    """Returns the parsed data.json file in data_format_path
+def get_preprocess_parameters(dataset_path: str) -> dict:
+    """Returns preprocessing parameters from a JSON file.
 
     Args:
-        data_format_path (str): path to the data format
-        model (str): name of the model
+        dataset_path (str): Path to the dataset directory.
 
     Returns:
-        dict: data.json file in data_format_path
+        dict: Preprocessing parameters loaded from 'parameters.json'.
     """
-    json_data = {}
-    json_path = osp.join(data_format_path, "data.json")
-    if osp.exists(json_path):
-        with open(json_path, "r") as f:
-            json_data = json.load(f)
-    json_data["model"] = model
-    return json_data
+    return validate_json.get_validated_json(
+        Path(dataset_path).joinpath("parameters.json"),
+        schemas.preprocess_parameters_schema,
+    )
 
 
 def generate_default_params(
@@ -80,6 +76,31 @@ def generate_default_params(
     return params
 
 
+def validate_preprocessor_data(
+    preprocessor_class: Preprocessor, preprocess_parameters: dict
+):
+    """
+    Validates the preprocessor data in preprocess_parameters against the schema in the given preprocessor_class
+
+    Args:
+        preprocessor_class (Preprocessor): class of the preprocessor
+        preprocess_parameters (dict): parameters for preprocessing
+
+    Raises:
+        ValueError: If the preprocessor data for the given data format is not found in parameters.json
+    """
+    if preprocessor_class.PREPROCESSOR_DATA_SCHEMA:
+        data_format = preprocessor_class.DATA_FORMAT
+        if not data_format in preprocess_parameters["preprocessor_data"]:
+            raise ValueError(
+                f"Preprocessor data for {data_format} not found in parameters.json"
+            )
+        validate_json.validate_dict(
+            preprocess_parameters["preprocessor_data"][data_format],
+            preprocessor_class.PREPROCESSOR_DATA_SCHEMA,
+        )
+
+
 def preprocess_data(args: argparse.Namespace):
     """Preprocesses data in dataset with ID dataset_id
 
@@ -87,20 +108,19 @@ def preprocess_data(args: argparse.Namespace):
         dataset_id (int): ID of the dataset to preprocess
     """
     dataset_id = args.d
-    model = args.m
-    max_length = 1024
+    # Get the path to the dataset and the name of the dataset
     dataset_path, dataset_name = get_path_to_dataset_and_name(
         "selfChatBot_raw", dataset_id
     )
+    preprocess_parameters = get_preprocess_parameters(dataset_path)
     processed_text = []
     for data_format in os.listdir(dataset_path):
         if not data_format in preprocessors:
             continue
+        preprocessor_class: Preprocessor = preprocessors[data_format]
+        validate_preprocessor_data(preprocessor_class, preprocess_parameters)
         format_path = osp.join(dataset_path, data_format)
-        preprocessor: Preprocessor = preprocessors[data_format](
-            get_json_data(format_path, model)
-        )
-        max_length = max(max_length, preprocessor.MAXIMUM_LENGTH)
+        preprocessor: Preprocessor = preprocessor_class(preprocess_parameters)
         for file in os.listdir(format_path):
             if not file.endswith(".txt"):
                 continue
@@ -116,7 +136,11 @@ def preprocess_data(args: argparse.Namespace):
         f.write("\n\n".join(processed_text))
     with open(osp.join(directory_path, "parameters.json"), "w") as f:
         json.dump(
-            generate_default_params(model, args.t, max_length),
+            generate_default_params(
+                preprocess_parameters["model"],
+                preprocess_parameters["type_fine_tune"],
+                preprocess_parameters["max_length"],
+            ),
             f,
             indent="\t",
             separators=(",", ": "),
@@ -152,20 +176,6 @@ def main():
         type=int,
         help="The ID of the dataset to preprocess",
         required=True,
-    )
-    parser.add_argument(
-        "-m",
-        type=str,
-        help="The model you want to fine tune on",
-        required=True,
-    )
-    parser.add_argument(
-        "-t",
-        default="lora",
-        const="lora",
-        nargs="?",
-        choices=["finetune", "lora", "qlora"],
-        help="The type of fine-tuning to use",
     )
     args = parser.parse_args()
     if not env.get("selfChatBot_raw"):
