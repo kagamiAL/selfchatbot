@@ -17,12 +17,11 @@ class DefaultFormatter(Formatter):
     @override
     def __init__(self, tokenizer):
         super().__init__(tokenizer)
-        if not self.tokenizer.chat_template:
-            self.tokenizer.chat_template = self.CHAT_TEMPLATE
-        else:
+        if self.tokenizer.chat_template:
             warn(
-                "There is already a chat template in the tokenizer, the roles may be different, please check."
+                "There already is a chat template set in the tokenizer, this will be overwritten"
             )
+        self.tokenizer.chat_template = self.CHAT_TEMPLATE
 
     @override
     def format_block(
