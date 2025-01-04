@@ -10,8 +10,8 @@ class DefaultFormatter(Formatter):
     USER_LABEL = "user"
     CHAT_TEMPLATE = (
         "{% if not add_generation_prompt is defined %}{% set add_generation_prompt = false %}{% endif %}"
-        "{% for message in messages %}{{'<|im_start|>' + message['role'] + '\n' + message['content'] + '<|im_end|>' + '\n'}}{% endfor %}"
-        "{% if add_generation_prompt %}{{ '<|im_start|>assistant\n' }}{% endif %}"
+        "{% for message in messages %}{{'<|start_header_id|>' + message['role'] + '<|end_header_id|>' + message['content'] + '<|eot_id|>'}}{% endfor %}"
+        "{% if add_generation_prompt %}{{ '<|start_header_id|>assistant<|end_header_id|>' }}{% endif %}"
     )
 
     @override
