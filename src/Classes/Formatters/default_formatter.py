@@ -1,6 +1,7 @@
 from Classes.Formatters.formatter import Formatter
 from Classes.TypeDicts import MessagePacket
 from typing import override
+from warnings import warn
 
 
 class DefaultFormatter(Formatter):
@@ -18,6 +19,10 @@ class DefaultFormatter(Formatter):
         super().__init__(tokenizer)
         if not self.tokenizer.chat_template:
             self.tokenizer.chat_template = self.CHAT_TEMPLATE
+        else:
+            warn(
+                "There is already a chat template in the tokenizer, the roles may be different, please check."
+            )
 
     @override
     def format_block(
