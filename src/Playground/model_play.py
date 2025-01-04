@@ -1,10 +1,10 @@
+import torch
 import argparse
 import json
 from os import environ as env
 from pathlib import Path
 from Classes.ChatModels.chat_model import ChatModel
 from DataProcessing.preprocess_data import get_path_to_dataset_and_name
-from peft import PeftModel
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 
@@ -31,24 +31,16 @@ def get_chat_model_arguments(model_path: str, args: argparse.Namespace) -> tuple
     Returns:
         tuple: The arguments to use for the chat model, (model, tokenizer, params)
     """
-    # base_path = Path(model_path)
-    # self.history = []
-    # self.model = AutoModelForCausalLM.from_pretrained(model_path)
-    # self.model.eval()
-    # self.tokenizer = AutoTokenizer.from_pretrained(
-    #    get_json_data(base_path.joinpath("config.json"))["_name_or_path"]
-    # )
-    # self.generation_params = get_json_data(
-    #    base_path.joinpath("generation_params.json")
-    # )
     path: Path = Path(model_path)
     parameters: dict = get_json_data(path.joinpath("parameters.json"))
-    model: AutoModelForCausalLM
-    if parameters["type_fine_tune"] == "lora":
-        model = AutoModelForCausalLM.from_pretrained(parameters["model"])
-        model = PeftModel.from_pretrained(model, path.joinpath(args.mt))
-    else:
-        model = AutoModelForCausalLM.from_pretrained(path.joinpath(args.mt))
+    model_kwargs = {}
+    if torch.cuda.is_available():
+        model_kwargs["device_map"] = "auto"
+        if parameters["type_fine_tune"] == "qlora":
+            model_kwargs["load_in_4bit"] = True
+    model: AutoModelForCausalLM = AutoModelForCausalLM.from_pretrained(
+        path.joinpath(args.mt), **model_kwargs
+    )
     return model, AutoTokenizer.from_pretrained(parameters["model"]), parameters
 
 
