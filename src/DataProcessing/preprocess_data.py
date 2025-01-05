@@ -7,6 +7,8 @@ import json
 from pathlib import Path
 from Classes.Preprocessors.preprocessor import Preprocessor
 from Classes.Schema import validate_json, schemas
+from Classes.Formatters.formatter import get_formatter
+from transformers import AutoTokenizer
 
 preprocessors: dict[str, Preprocessor] = {}
 
@@ -114,13 +116,17 @@ def preprocess_data(args: argparse.Namespace):
     )
     preprocess_parameters = get_preprocess_parameters(dataset_path)
     processed_text = []
+    tokenizer = AutoTokenizer.from_pretrained(preprocess_parameters["model"])
+    formatter = get_formatter(preprocess_parameters["model"], tokenizer)
     for data_format in os.listdir(dataset_path):
         if not data_format in preprocessors:
             continue
         preprocessor_class: Preprocessor = preprocessors[data_format]
         validate_preprocessor_data(preprocessor_class, preprocess_parameters)
         format_path = osp.join(dataset_path, data_format)
-        preprocessor: Preprocessor = preprocessor_class(preprocess_parameters)
+        preprocessor: Preprocessor = preprocessor_class(
+            tokenizer, formatter, preprocess_parameters
+        )
         for file in os.listdir(format_path):
             if not file.endswith(".txt"):
                 continue

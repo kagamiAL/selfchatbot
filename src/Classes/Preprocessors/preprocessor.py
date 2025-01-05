@@ -1,14 +1,14 @@
-from transformers import AutoTokenizer
+from transformers import PreTrainedTokenizer
 from abc import ABC, abstractmethod
 from typing import Optional
-from Classes.Formatters.formatter import Formatter, get_formatter
+from Classes.Formatters.formatter import Formatter
 from Classes.TypeDicts import MessagePacket
 
 
 class Preprocessor(ABC):
     DATA_FORMAT: str = "Default"
 
-    tokenizer: AutoTokenizer
+    tokenizer: PreTrainedTokenizer
     formatter: Formatter
 
     # Optional schema for extra parameters that the preprocessor can use in the parameters.json file
@@ -18,9 +18,11 @@ class Preprocessor(ABC):
     MAXIMUM_LENGTH: int = 1024
     MINIMUM_LENGTH: int = 75
 
-    def __init__(self, params: dict):
-        self.tokenizer = AutoTokenizer.from_pretrained(params["model"])
-        self.formatter = get_formatter(params["model"], self.tokenizer)
+    def __init__(
+        self, tokenizer: PreTrainedTokenizer, formatter: Formatter, params: dict
+    ):
+        self.tokenizer = tokenizer
+        self.formatter = formatter
         self.MAXIMUM_LENGTH = params["max_length"]
         self.MAXIMUM_LENGTH = min(self.MAXIMUM_LENGTH, self.tokenizer.model_max_length)
 

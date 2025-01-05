@@ -34,8 +34,8 @@ class DiscordChatExporterPreprocessor(Preprocessor):
     username: str
 
     @override
-    def __init__(self, params: dict):
-        super().__init__(params)
+    def __init__(self, tokenizer, formatter, params):
+        super().__init__(tokenizer, formatter, params)
         discord_chat_exporter_data = params["preprocessor_data"][self.DATA_FORMAT]
         self.username = discord_chat_exporter_data["username"]
 
