@@ -1,29 +1,17 @@
 import torch.nn.functional as F
-import re
-
-
-def filter_responses(prompt: str, responses: list[str]) -> list[str]:
-    """Filters the responses so that only your response is returned
-
-    Args:
-        prompt (str): The prompt
-        responses (list[str]): The responses
-
-    Returns:
-        list[str]: The filtered responses
-    """
-    pattern = rf"U:\s?{re.escape(prompt)}Y:\s?(.*?)(?=U:|$)"
-    filtered = []
-    for response in responses:
-        result = re.findall(pattern, response.lstrip(), re.DOTALL)
-        filtered.append(result[-1])
-    return filtered
+from collections import deque
+from Classes.Formatters.formatter import Formatter, get_formatter
+from Classes.TypeDicts import MessagePacket
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 
 class ChatModel:
     MAX_LENGTH = 1024
-    history: list[str]
+    model: AutoModelForCausalLM
+    tokenizer: AutoTokenizer
+    history: list[MessagePacket]
     generation_params: dict
+    formatter: Formatter
 
     def __init__(self, model, tokenizer, params: dict):
         model.eval()
@@ -31,8 +19,35 @@ class ChatModel:
         self.generation_params = params
         self.model = model
         self.tokenizer = tokenizer
+        self.formatter = get_formatter(params["model"], self.tokenizer)
         self.MAX_LENGTH = params["max_length"]
         self.MAX_LENGTH = min(self.MAX_LENGTH, self.tokenizer.model_max_length)
+
+    def __get_encoding(self, prompt: str, history: bool = False):
+        """
+        Get the encoding of the prompt, possibly with the history
+
+        Args:
+            prompt (str): The prompt to encode
+            history (bool, optional): Whether to include the history in the encoding. Defaults to False.
+
+        Raises:
+            ValueError: If the prompt is too long
+
+        Returns:
+            dict: a dictionary with the encoding
+        """
+        block = deque([])
+        if history:
+            block += self.history
+        block.append({"role": self.formatter.USER_LABEL, "content": prompt})
+        encoding: dict = self.formatter.get_prompt_encoding(block)
+        while len(encoding["input_ids"]) > self.MAX_LENGTH:
+            block.popleft()
+            encoding = self.formatter.get_prompt_encoding(block)
+        if not block:
+            raise ValueError("Prompt is too long for given max length")
+        return encoding
 
     def __generate(self, input_ids):
         """Generates from the model
@@ -57,50 +72,6 @@ class ChatModel:
             return_dict_in_generate=True,
         )
 
-    def __get_encoding(self, prompt: str, history: bool = False) -> dict[str, any]:
-        """Returns the formatted encodings for the model
-
-        Args:
-            prompt (str): The prompt
-            history (bool, optional): Whether or not to use chat history. Defaults to False.
-
-        Returns:
-            dict[str, any]: The formatted encodings
-        """
-        formatted_prompt = (
-            f"{self.tokenizer.eos_token}U: {prompt}{self.tokenizer.eos_token}Y:"
-        )
-        final_prompt = formatted_prompt
-        if history:
-            final_prompt = "".join(self.history) + formatted_prompt
-            i = 0
-            max_attempts = len(self.history)
-            while (
-                len(self.tokenizer.encode(final_prompt)) > self.MAX_LENGTH
-                and i < max_attempts
-            ):
-                i += 1
-                final_prompt = "".join(self.history[i:]) + formatted_prompt
-        return self.tokenizer.encode_plus(final_prompt, return_tensors="pt")
-
-    def get_responses(self, input_ids) -> list[str]:
-        """Returns the decoded responses from the model
-
-        Args:
-            input_ids (torch.tensor): input ids
-
-        Returns:
-            list[str]: list of responses from the model
-        """
-
-        sequences = self.__generate(input_ids).sequences
-
-        # Decode the sequences
-        return [
-            self.tokenizer.decode(sequence, skip_special_tokens=True)
-            for sequence in sequences
-        ]
-
     def prompt_best_response(self, prompt: str, history: bool = False) -> str:
         """Prompts the model for the best response (calculated by log-probability)
 
@@ -112,7 +83,8 @@ class ChatModel:
             str: The best response
         """
         prompt = prompt.strip()
-        output = self.__generate(self.__get_encoding(prompt, history))
+        encoded_prompt = self.__get_encoding(prompt, history)
+        output = self.__generate(encoded_prompt)
         # Decode sequences and extract token-wise scores
         sequences = output.sequences
         scores = output.scores  # List of token logits at each step
@@ -136,12 +108,11 @@ class ChatModel:
         best_sequence_idx = normalized_scores.index(max(normalized_scores))
         best_sequence = sequences[best_sequence_idx]
 
-        # Decode the best sequence
-        best_output = self.tokenizer.decode(best_sequence, skip_special_tokens=True)
-        filtered = filter_responses(prompt, [best_output])
-        if filtered:
-            return filtered[0]
-        return ""
+        print(f"DEBUG: {repr(self.tokenizer.decode(best_sequence))}")
+
+        return self.formatter.filter_output(
+            encoded_prompt["input_ids"].squeeze(0), best_sequence
+        )
 
     def prompt_for_responses(
         self, passed_prompt: str, history: bool = False
@@ -156,10 +127,11 @@ class ChatModel:
             list[str]: The responses from the model
         """
         passed_prompt = passed_prompt.strip()
-        return filter_responses(
-            passed_prompt,
-            self.get_responses(self.__get_encoding(passed_prompt, history)),
-        )
+        encoding = self.__get_encoding(passed_prompt, history)
+        return [
+            self.formatter.filter_output(encoding["input_ids"].squeeze(0), seq)
+            for seq in self.__generate(encoding)
+        ]
 
     def add_to_history(self, prompt: str, response: str):
         """Adds the prompt and response to the history
@@ -168,6 +140,9 @@ class ChatModel:
             prompt (str): the prompt
             response (str): the response
         """
-        self.history.append(
-            f"{self.tokenizer.eos_token}U: {prompt.strip()}{self.tokenizer.eos_token}Y: {response}"
+        self.history.extend(
+            [
+                {"role": self.formatter.USER_LABEL, "content": prompt},
+                {"role": self.formatter.MODEL_LABEL, "content": response},
+            ]
         )
