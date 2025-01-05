@@ -25,7 +25,8 @@ class ChatDataset(Dataset):
         self.data = data
         self.input_ids = []
         self.attn_masks = []
-        tokenizer.pad_token = tokenizer.eos_token
+        if not tokenizer.pad_token:
+            tokenizer.pad_token = tokenizer.eos_token
         for prompt in data:
             encodings = tokenizer.encode_plus(
                 prompt,
