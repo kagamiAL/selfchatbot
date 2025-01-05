@@ -1,3 +1,4 @@
+import torch
 from warnings import warn
 from abc import ABC, abstractmethod
 from transformers import AutoConfig
@@ -38,8 +39,22 @@ class Formatter(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def format_prompt(self, block: list[MessagePacket]) -> str:
-        """Formats a block of MessagePackets to a string as a prompt
+    def get_prompt_encoding(
+        self, block: list[MessagePacket]
+    ) -> dict[str, torch.Tensor]:
+        """Encodes a block of MessagePackets into a dictionary containing the input_ids and attention_mask
+
+        Args:
+            block (list[MessagePacket]): The block to encode
+
+        Raises:
+            NotImplementedError:
+
+        Returns:
+            dict[str, torch.Tensor]: A dictionary containing the input_ids and attention_mask
+        """
+        raise NotImplementedError
+
 
         Args:
             block (list[MessagePacket]): the block to format

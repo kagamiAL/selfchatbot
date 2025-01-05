@@ -1,3 +1,4 @@
+import torch
 from Classes.Formatters.formatter import Formatter
 from Classes.TypeDicts import MessagePacket
 from typing import override
@@ -28,7 +29,14 @@ class DefaultFormatter(Formatter):
         return self.tokenizer.apply_chat_template(block, tokenize=False)
 
     @override
-    def format_prompt(self, block: list[MessagePacket]) -> str:
+    def get_prompt_encoding(
+        self, block: list[MessagePacket]
+    ) -> dict[str, torch.Tensor]:
         return self.tokenizer.apply_chat_template(
-            block, tokenize=False, add_generation_prompt=True
+            block,
+            tokenize=True,
+            add_generation_prompt=True,
+            return_tensors="pt",
+            return_dict=True,
         )
+
