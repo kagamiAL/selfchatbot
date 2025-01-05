@@ -55,15 +55,20 @@ class Formatter(ABC):
         """
         raise NotImplementedError
 
+    @abstractmethod
+    def filter_output(self, prompt: torch.Tensor, raw_output: torch.Tensor) -> str:
+        """Filters the output of the model and returns a string
+        Input and output Tensors are NOT padded so they may be different sizes
 
         Args:
-            block (list[MessagePacket]): the block to format
+            prompt (torch.Tensor): The input used to generate the output
+            raw_output (torch.Tensor): The raw output of the model
 
         Raises:
             NotImplementedError
 
         Returns:
-            str: the formatted block as a string
+            str: The filtered output as a string
         """
         raise NotImplementedError
 
