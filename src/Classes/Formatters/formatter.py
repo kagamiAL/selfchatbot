@@ -1,7 +1,8 @@
 import torch
+from typing import Optional
 from warnings import warn
 from abc import ABC, abstractmethod
-from transformers import AutoConfig
+from transformers import AutoConfig, PreTrainedTokenizer
 from Classes.TypeDicts import MessagePacket
 
 formatters: dict[str, "Formatter"] = {}
@@ -11,6 +12,8 @@ class Formatter(ABC):
     MODEL_NAME: str
     MODEL_LABEL: str
     USER_LABEL: str
+    SPECIAL_TOKENS: Optional[list[str]] = None
+    tokenizer: PreTrainedTokenizer
 
     def __init__(self, tokenizer):
         self.tokenizer = tokenizer
@@ -22,6 +25,29 @@ class Formatter(ABC):
             list[str]: [USER_LABEL, MODEL_LABEL]
         """
         return [self.USER_LABEL, self.MODEL_LABEL]
+
+    def add_special_tokens_to_tokenizer(self):
+        """Adds special tokens to the tokenizer if they are not already present.
+
+        This method checks if the tokens specified in `SPECIAL_TOKENS` are already
+        in the tokenizer's vocabulary. If any tokens are missing, they are added
+        as additional special tokens to the tokenizer.
+
+        Returns:
+            bool: True if new special tokens were added to the tokenizer, False otherwise.
+        """
+
+        if self.SPECIAL_TOKENS:
+            comparison = set(self.SPECIAL_TOKENS)
+            for token in self.tokenizer.get_vocab():
+                if token in comparison:
+                    comparison.remove(token)
+            if comparison:
+                self.tokenizer.add_special_tokens(
+                    {"additional_special_tokens": list(comparison)}
+                )
+                return True
+        return False
 
     @abstractmethod
     def format_block(self, block: list[MessagePacket]) -> str:
