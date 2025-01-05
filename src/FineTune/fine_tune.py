@@ -2,13 +2,13 @@ import argparse
 import json
 import os.path as osp
 import torch
+import Util.utilities as U
 from pathlib import Path
 from torch.optim import AdamW
 from torch.utils.data import random_split, DataLoader
 from os import environ as env
 from transformers import (
     AutoModelForCausalLM,
-    AutoTokenizer,
     AutoConfig,
     Conv1D,
     BitsAndBytesConfig,
@@ -16,7 +16,6 @@ from transformers import (
 )
 from Classes.FineTuners.fine_tuner import FineTuner
 from Classes.Datasets.chat_dataset import ChatDataset
-from DataProcessing.preprocess_data import get_path_to_dataset_and_name
 from peft import get_peft_model, LoraConfig, TaskType, prepare_model_for_kbit_training
 
 
@@ -210,7 +209,7 @@ def fine_tuning_loop(dataset_id: int):
     Args:
         dataset_id (int): ID of the dataset
     """
-    dataset_path, dataset_name = get_path_to_dataset_and_name(
+    dataset_path, dataset_name = U.get_path_to_dataset_and_name(
         "selfChatBot_preprocessed", dataset_id
     )
     parameters = get_params(dataset_path)

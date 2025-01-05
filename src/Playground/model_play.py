@@ -1,10 +1,10 @@
 import torch
 import argparse
 import json
+import Util.utilities as U
 from os import environ as env
 from pathlib import Path
 from Classes.ChatModels.chat_model import ChatModel
-from DataProcessing.preprocess_data import get_path_to_dataset_and_name
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 
@@ -73,7 +73,7 @@ def main():
     if not env.get("selfChatBot_results"):
         raise Exception("selfChatBot_results variable not set in environment")
     args = parser.parse_args()
-    dataset_path, _ = get_path_to_dataset_and_name("selfChatBot_results", args.d)
+    dataset_path, _ = U.get_path_to_dataset_and_name("selfChatBot_results", args.d)
     chat_model = ChatModel(*get_chat_model_arguments(dataset_path, args))
     match args.t:
         case "session":
