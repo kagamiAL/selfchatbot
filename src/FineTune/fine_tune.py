@@ -215,6 +215,7 @@ def fine_tuning_loop(dataset_id: int):
     )
     parameters = get_params(dataset_path)
     # TODO: This is just me learning how to make my own training loop, I will use huggingface's more advanced training loop later
+    # TODO: Let people add custom special tokens to the tokenizer if they want, and save the tokenizer as well
     model = get_model(parameters)
     chat_dataset = ChatDataset(
         get_corpora(dataset_path),
