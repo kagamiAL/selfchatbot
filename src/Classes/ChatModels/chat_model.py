@@ -31,6 +31,8 @@ class ChatModel:
         self.generation_params = params
         self.model = model
         self.tokenizer = tokenizer
+        self.MAX_LENGTH = params["max_length"]
+        self.MAX_LENGTH = min(self.MAX_LENGTH, self.tokenizer.model_max_length)
 
     def __generate(self, input_ids):
         """Generates from the model
