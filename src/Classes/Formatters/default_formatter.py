@@ -1,4 +1,5 @@
 import torch
+import torch.nn.functional as F
 from Classes.Formatters.formatter import Formatter
 from Classes.TypeDicts import MessagePacket
 from typing import override
@@ -40,3 +41,13 @@ class DefaultFormatter(Formatter):
             return_dict=True,
         )
 
+    @override
+    def filter_output(self, prompt: torch.Tensor, raw_output: torch.Tensor) -> str:
+        max_length = max(len(prompt), len(raw_output))
+        padded_prompt = F.pad(prompt, (0, max_length - len(prompt)), value=-1)
+        padded_output = F.pad(raw_output, (0, max_length - len(raw_output)), value=-1)
+        # Find differing elements while ignoring padding
+        difference_mask = padded_prompt != padded_output
+        # Get the differing elements
+        filtered_encoding = padded_output[difference_mask & (padded_output != -1)]
+        return self.tokenizer.decode(filtered_encoding, skip_special_tokens=True)
