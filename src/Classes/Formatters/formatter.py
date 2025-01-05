@@ -37,6 +37,21 @@ class Formatter(ABC):
         """
         raise NotImplementedError
 
+    @abstractmethod
+    def format_prompt(self, block: list[MessagePacket]) -> str:
+        """Formats a block of MessagePackets to a string as a prompt
+
+        Args:
+            block (list[MessagePacket]): the block to format
+
+        Raises:
+            NotImplementedError
+
+        Returns:
+            str: the formatted block as a string
+        """
+        raise NotImplementedError
+
 
 def get_formatter(model_name: str, tokenizer) -> Formatter:
     """Returns a formatter for a given model name

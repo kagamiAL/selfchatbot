@@ -26,3 +26,9 @@ class DefaultFormatter(Formatter):
     @override
     def format_block(self, block: list[MessagePacket]) -> str:
         return self.tokenizer.apply_chat_template(block, tokenize=False)
+
+    @override
+    def format_prompt(self, block: list[MessagePacket]) -> str:
+        return self.tokenizer.apply_chat_template(
+            block, tokenize=False, add_generation_prompt=True
+        )
