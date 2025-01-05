@@ -15,6 +15,7 @@ class DefaultFormatter(Formatter):
         "{% for message in messages %}{{'<|start_header_id|>' + message['role'] + '<|end_header_id|>' + message['content'] + '<|eot_id|>'}}{% endfor %}"
         "{% if add_generation_prompt %}{{ '<|start_header_id|>assistant<|end_header_id|>' }}{% endif %}"
     )
+    SPECIAL_TOKENS = ["<|start_header_id|>", "<|end_header_id|>", "<|eot_id|>"]
 
     @override
     def __init__(self, tokenizer):
