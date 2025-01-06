@@ -231,6 +231,15 @@ def save_resized_model(
         model.save_pretrained(save_path)
 
 
+def save_results_json_data(save_path: Path, parameters: dict):
+    """Saves the parameters as debug.json and the default generation parameters
+    to parameters.json in the given save_path
+    """
+    save_default_generation_params(save_path, parameters)
+    with open(save_path.joinpath("debug.json"), "w") as f:
+        json.dump(parameters, f, indent="\t", separators=(",", ": "))
+
+
 def fine_tuning_loop(dataset_id: int):
     """Fine tune a model on a dataset
 
@@ -243,14 +252,17 @@ def fine_tuning_loop(dataset_id: int):
     save_path = Path(osp.join(env["selfChatBot_results"], dataset_name))
     save_path.mkdir(parents=True, exist_ok=True)
     parameters = get_params(preprocessed_path)
-    # TODO: This is just me learning how to make my own training loop, I will use huggingface's more advanced training loop later
+    # * Save parameters before I start modifying them
+    save_results_json_data(save_path, parameters)
     tokenizer = U.get_tokenizer(preprocessed_path, parameters["model"])
     if U.custom_tokenizer_exists(preprocessed_path):
         U.save_tokenizer(save_path, tokenizer)
         save_resized_model(preprocessed_path, parameters["model"], tokenizer)
+    # ! I probably shouldn't be modifying the parameters directly here but it works I don't care
     parameters["model"] = get_model_id(preprocessed_path, parameters)
     model = get_model(parameters)
     chat_dataset = ChatDataset(get_corpora(preprocessed_path), tokenizer)
+    # TODO: This is just me learning how to make my own training loop, I will use huggingface's more advanced training loop later
     train_size = int(parameters["dataset_split"] * len(chat_dataset))
     val_size = len(chat_dataset) - train_size
     train_dataset, val_dataset = random_split(chat_dataset, [train_size, val_size])
@@ -279,9 +291,6 @@ def fine_tuning_loop(dataset_id: int):
         if parameters["type_fine_tune"] == "qlora"
         else {}
     )
-    save_default_generation_params(save_path, parameters)
-    with open(save_path.joinpath("debug.json"), "w") as f:
-        json.dump(parameters, f, indent="\t", separators=(",", ": "))
     finetuner = FineTuner(
         model=model,
         optimizer=optimizer,
