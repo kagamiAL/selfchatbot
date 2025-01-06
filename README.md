@@ -15,6 +15,11 @@ selfchatbot
 - [Environment Variables](#environment-variables)
   - [Required Variables](#required-variables)
   - [Setting Environment Variables](#setting-environment-variables)
+- [Dataset Folder Structure](#dataset-folder-structure)
+  - [Folder Naming Convention](#folder-naming-convention)
+    - [Examples](#examples)
+  - [Contents of Each Dataset Folder](#contents-of-each-dataset-folder)
+  - [Example Directory Layout](#example-directory-layout)
 - [Authors](#authors)
 
 
@@ -114,6 +119,64 @@ selfchatbot requires several environment variables to be set for proper function
 - Ensure that the paths you provide are absolute paths for consistency.
 - The project will automatically detect and load the .env file if it exists.
 - For large datasets, ensure the directories have sufficient storage capacity.
+
+
+## Dataset Folder Structure
+
+Datasets in the `selfChatBot_raw` directory must adhere to a specific folder structure to ensure proper functionality. Below are the details for organizing datasets:
+
+### Folder Naming Convention
+
+Each dataset folder should follow the naming template:
+
+Dataset_`ID`_`Name`
+
+- **`ID`**: A unique integer identifier for the dataset. This ensures each dataset is distinct (e.g., `1`, `2`, `42`).
+- **`Name`**: A descriptive, human-readable name for the dataset. This can be any string that helps you identify the dataset (e.g., `RedditChats`, `DiscordLogs`).
+
+#### Examples
+
+- `Dataset_1_DiscordLogs`, here `1` is the ID and `DiscordLogs` is the name
+- `Dataset_2_RedditChats`, here `2` is the ID and `RedditChats` is the name
+
+### Contents of Each Dataset Folder
+
+1. **`parameters.json`**
+    - Each dataset folder must contain a `parameters.json` file, specifying fine-tuning parameters. See the [Parameters](#parameters) section for more details.
+
+2. Sub-Folders for Message Formats
+    - Each dataset folder contains sub-folders named after the format of the .txt files they contain. Examples of sub-folder names include:
+
+        - **DiscordChatExporter** for data exported by DiscordChatExporter.
+
+3. .txt Files
+    - Each sub-folder contains .txt files representing the messages. These files must conform to the format associated with their sub-folder name
+
+### Example Directory Layout
+Here's an example directory layout for a dataset:
+```
+selfChatBot_raw/
+├── Dataset_1_DiscordLogs/
+│   ├── parameters.json
+│   ├── DiscordChatExporter/
+│   │   ├── channel1.txt
+│   │   ├── channel2.txt
+│   └── GenericFormat/
+│       ├── misc.txt
+├── Dataset_2_RedditChats/
+│   ├── parameters.json
+│   ├── RedditFormat/
+│       ├── thread1.txt
+│       ├── thread2.txt
+```
+For more clarity, you can look at the [SampleEnvironment](https://github.com/kagamiAL/selfchatbot/tree/main/SampleEnvironment) folder.
+
+<h3>Notes</h3>
+
+- Use unique integers for ID to avoid conflicts.
+- Choose meaningful names for Name to easily identify datasets.
+- Ensure the parameters.json file is present in every dataset folder and contains all required parameters.
+- Sub-folder names must reflect the format of their .txt files for clarity and proper processing.
 
 ## Authors
 Alan Bach, bachalan330@gmail.com
