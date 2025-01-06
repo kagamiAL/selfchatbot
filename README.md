@@ -37,6 +37,8 @@ look at the [Preprocessors](https://github.com/kagamiAL/selfchatbot/tree/main/sr
 - [Parameters JSON](#parameters-json)
   - [Sample `parameters.json`](#sample-parametersjson)
   - [Field Descriptions](#field-descriptions)
+- [Usage](#usage)
+  - [Preprocessing](#preprocessing)
 - [Authors](#authors)
 
 ## Installation
@@ -132,11 +134,11 @@ Each dataset folder should follow the naming template:
 Dataset_`ID`_`Name`
 
 - **`ID`**: A unique integer identifier for the dataset. This ensures each dataset is distinct (e.g., `1`, `2`, `42`).
-- **`Name`**: A descriptive, human-readable name for the dataset. This can be any string that helps you identify the dataset (e.g., `RedditChats`, `DiscordLogs`).
+- **`Name`**: A descriptive, human-readable name for the dataset. This can be any string that helps you identify the dataset (e.g., `RedditChats`, `Discord_Data`).
 
 #### Examples
 
-- `Dataset_1_DiscordLogs`, here `1` is the ID and `DiscordLogs` is the name
+- `Dataset_1_Discord_Data`, here `1` is the ID and `Discord_Data` is the name
 - `Dataset_2_RedditChats`, here `2` is the ID and `RedditChats` is the name
 
 ### Contents of Each Dataset Folder
@@ -156,13 +158,11 @@ Dataset_`ID`_`Name`
 Here's an example directory layout for a dataset:
 ```
 selfChatBot_raw/
-├── Dataset_1_DiscordLogs/
+├── Dataset_1_Discord_Data/
 │   ├── parameters.json
 │   ├── DiscordChatExporter/
 │   │   ├── channel1.txt
 │   │   ├── channel2.txt
-│   └── GenericFormat/
-│       ├── misc.txt
 ├── Dataset_2_RedditChats/
 │   ├── parameters.json
 │   ├── RedditFormat/
@@ -235,6 +235,30 @@ Each dataset folder in `selfChatBot_raw` must include a `parameters.json` file t
 - Make sure all fields are correctly defined; missing or invalid values can cause errors during fine-tuning.
 - The preprocessor_data field is optional but must be included if specific preprocessing is required for the dataset's format.
 - For fine-tuning with different methods (lora, qlora, or finetune), ensure the base model and parameters are compatible with the chosen method
+
+## Usage
+Before using selfchatbot make sure you have checked out [Installation](#installation), [Environment Variables](#environment-variables), [Data Folder Structure](#dataset-folder-structure), and [Parameters JSON](#parameters-json). For a quick start, see [SampleEnvironment](https://github.com/kagamiAL/selfchatbot/tree/main/SampleEnvironment).
+
+### Preprocessing
+You must preprocess your data before moving on to finetuning
+
+To preprocess a dataset, use the command-line tool `selfChatBot_preprocess`. This command processes data from various sources within a dataset folder and prepares it for fine-tuning.
+
+<h4>Command:</h4>
+
+```bash
+selfChatBot_preprocess -d <Dataset_ID>
+```
+- **`-d <Dataset_ID>`**: The unique ID of the dataset to preprocess. This corresponds to the ID in the dataset folder name (Dataset_{ID}_{Name}).
+
+<h4>Example:</h4>
+
+```bash
+selfChatBot_preprocess -d 1
+```
+This example preprocesses the dataset located in `selfChatBot_raw/Dataset_1_Discord_Data`.
+
+Preprocessed data will be saved in `selfChatBot_preprocessed/Dataset_1_Discord_Data`.
 
 ## Authors
 Alan Bach, bachalan330@gmail.com
