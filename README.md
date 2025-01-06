@@ -280,7 +280,6 @@ selfChatBot_train -d <Dataset_ID>
 <h4>Notes</h4>
 
 - The fine-tuning results (including the model weights) will be saved in the `selfChatBot_results` directory.
-- Refer to the [Data Folder Structure](#dataset-folder-structure) and [Parameters JSON](#parameters-json) section for details on preparing datasets before fine-tuning.
 
 ### Playing with the Chat Model
 
