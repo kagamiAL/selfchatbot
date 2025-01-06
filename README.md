@@ -296,7 +296,7 @@ selfChatBot_play -d <Dataset_ID> [-t <interaction_type>] [-p <prompt>] [-mt <mod
   - **`session`**: Initiates an ongoing chat session.
   - **`prompt`**: Interacts with the model using a custom prompt.
 
-  Default is **`session.
+  Default is **`session`**.
 - **`-p <prompt>`**: (Required if **`-t prompt`** is selected) The custom prompt to use for the interaction when **`-t prompt`** is specified.
 - **`-mt <model_type>`**: (Optional) Specifies which model to use for interaction.
   - **`best`**: Use the best-performing model (the one with the lowest validation loss).
