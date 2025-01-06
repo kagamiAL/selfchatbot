@@ -90,20 +90,6 @@ def validate_preprocessor_data(
         )
 
 
-def save_tokenizer(directory_path: str, tokenizer: PreTrainedTokenizer):
-    """
-    Saves a custom tokenizer to a specified directory.
-
-    Args:
-        directory_path (str): The path to the directory where the tokenizer should be saved.
-        tokenizer (PreTrainedTokenizer): The tokenizer to be saved.
-    """
-
-    save_path = osp.join(directory_path, "tokenizer")
-    Path(save_path).mkdir(exist_ok=True)
-    tokenizer.save_pretrained(save_path)
-
-
 def save_resized_model(
     directory_path: str, model_name: str, tokenizer: PreTrainedTokenizer
 ):
@@ -143,7 +129,7 @@ def preprocess_data(args: argparse.Namespace):
     tokenizer = AutoTokenizer.from_pretrained(preprocess_parameters["model"])
     formatter = get_formatter(preprocess_parameters["model"], tokenizer)
     if formatter.add_special_tokens_to_tokenizer():
-        save_tokenizer(directory_path, tokenizer)
+        U.save_tokenizer(directory_path, tokenizer)
         save_resized_model(directory_path, preprocess_parameters["model"], tokenizer)
     processed_text = []
     for data_format in os.listdir(dataset_path):
