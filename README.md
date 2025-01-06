@@ -251,7 +251,7 @@ To preprocess a dataset, use the command-line tool `selfChatBot_preprocess`. Thi
 ```bash
 selfChatBot_preprocess -d <Dataset_ID>
 ```
-- **`-d <Dataset_ID>`**: The unique ID of the dataset to preprocess. This corresponds to the ID in the dataset folder name (Dataset_{ID}_{Name}).
+- **`-d <Dataset_ID>`**: The unique ID of the dataset to preprocess. This corresponds to the ID in the dataset folder name (**`Dataset_{ID}_{Name}`**).
 
 <h4>Example:</h4>
 
@@ -275,7 +275,7 @@ To fine-tune a model on a dataset, use the command-line tool `selfChatBot_train`
 ```bash
 selfChatBot_train -d <Dataset_ID>
 ```
-- **`-d <Dataset_ID>`**: The unique ID of the dataset to fine-tune the model on. This corresponds to the ID in the dataset folder name (Dataset_{ID}_{Name}).
+- **`-d <Dataset_ID>`**: The unique ID of the dataset to fine-tune the model on. This corresponds to the ID in the dataset folder name (**`Dataset_{ID}_{Name}`**).
 
 <h4>Notes</h4>
 
