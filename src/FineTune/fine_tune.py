@@ -195,12 +195,18 @@ def get_model(parameters: dict) -> AutoModelForCausalLM:
             parameters["model"],
             config=get_config(parameters),
         )
-    if (
-        parameters["type_fine_tune"] == "lora"
-        or parameters["type_fine_tune"] == "qlora"
-    ):
+    if parameters["type_fine_tune"] in ["lora", "qlora"]:
         return get_peft_model(model, get_lora_config(parameters, model))
     return model
+
+
+def get_model_id(preprocessed_path: str, parameters: dict) -> str:
+    """Returns the path to the model, if it exists, else the model name from parameters"""
+
+    path = Path(preprocessed_path).joinpath("model")
+    if path.is_dir():
+        return str(path)
+    return parameters["model"]
 
 
 def fine_tuning_loop(dataset_id: int):
@@ -214,12 +220,10 @@ def fine_tuning_loop(dataset_id: int):
     )
     parameters = get_params(dataset_path)
     # TODO: This is just me learning how to make my own training loop, I will use huggingface's more advanced training loop later
-    # TODO: Let people add custom special tokens to the tokenizer if they want, and save the tokenizer as well
+    parameters["model"] = get_model_id(dataset_path, parameters)
+    tokenizer = U.get_tokenizer(dataset_path, parameters["model"])
     model = get_model(parameters)
-    chat_dataset = ChatDataset(
-        get_corpora(dataset_path),
-        AutoTokenizer.from_pretrained(parameters["model"]),
-    )
+    chat_dataset = ChatDataset(get_corpora(dataset_path), tokenizer)
     train_size = int(parameters["dataset_split"] * len(chat_dataset))
     val_size = len(chat_dataset) - train_size
     train_dataset, val_dataset = random_split(chat_dataset, [train_size, val_size])
@@ -263,6 +267,8 @@ def fine_tuning_loop(dataset_id: int):
         **q_lora_args,
     )
     model.config.use_cache = False
+    if U.custom_tokenizer_exists(dataset_path):
+        U.save_tokenizer(save_path, tokenizer)
     finetuner.fine_tune(parameters["epochs"])
 
 
