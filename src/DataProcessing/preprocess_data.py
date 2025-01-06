@@ -8,7 +8,12 @@ from pathlib import Path
 from Classes.Preprocessors.preprocessor import Preprocessor
 from Classes.Schema import validate_json, schemas
 from Classes.Formatters.formatter import get_formatter
-from transformers import AutoTokenizer, PreTrainedTokenizer
+from transformers import (
+    AutoTokenizer,
+    PreTrainedTokenizer,
+    AutoModelForCausalLM,
+    PreTrainedModel,
+)
 
 preprocessors: dict[str, Preprocessor] = {}
 
@@ -99,6 +104,28 @@ def save_tokenizer(directory_path: str, tokenizer: PreTrainedTokenizer):
     tokenizer.save_pretrained(save_path)
 
 
+def save_resized_model(
+    directory_path: str, model_name: str, tokenizer: PreTrainedTokenizer
+):
+    """
+    Saves a resized model to a specified directory.
+
+    This function loads a pre-trained model, resizes its token embeddings to match the length of the provided tokenizer,
+    and saves the updated model to a specified directory.
+
+    Args:
+        directory_path (str): The path to the directory where the model should be saved.
+        model_name (str): The name of the pre-trained model to be loaded and resized.
+        tokenizer (PreTrainedTokenizer): The tokenizer whose length will determine the new size of the model's token embeddings.
+    """
+
+    save_path = osp.join(directory_path, "model")
+    Path(save_path).mkdir(exist_ok=True)
+    model: PreTrainedModel = AutoModelForCausalLM.from_pretrained(model_name)
+    model.resize_token_embeddings(len(tokenizer))
+    model.save_pretrained(save_path)
+
+
 def preprocess_data(args: argparse.Namespace):
     """Preprocesses data in dataset with ID dataset_id
 
@@ -117,6 +144,7 @@ def preprocess_data(args: argparse.Namespace):
     formatter = get_formatter(preprocess_parameters["model"], tokenizer)
     if formatter.add_special_tokens_to_tokenizer():
         save_tokenizer(directory_path, tokenizer)
+        save_resized_model(directory_path, preprocess_parameters["model"], tokenizer)
     processed_text = []
     for data_format in os.listdir(dataset_path):
         if not data_format in preprocessors:
