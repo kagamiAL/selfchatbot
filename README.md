@@ -39,6 +39,7 @@ look at the [Preprocessors](https://github.com/kagamiAL/selfchatbot/tree/main/sr
   - [Field Descriptions](#field-descriptions)
 - [Usage](#usage)
   - [Preprocessing](#preprocessing)
+  - [Finetuning](#finetuning)
 - [Authors](#authors)
 
 ## Installation
@@ -259,6 +260,22 @@ selfChatBot_preprocess -d 1
 This example preprocesses the dataset located in `selfChatBot_raw/Dataset_1_Discord_Data`.
 
 Preprocessed data will be saved in `selfChatBot_preprocessed/Dataset_1_Discord_Data`.
+
+### Finetuning
+You are now ready to fine tune a model on your preprocessed data.
+
+To fine-tune a model on a dataset, use the command-line tool `selfChatBot_train`. This command trains the model using preprocessed data from the specified dataset.
+
+<h4>Command</h4>
+
+```bash
+selfChatBot_train -d <Dataset_ID>
+```
+- **`-d <Dataset_ID>`**: The unique ID of the dataset to fine-tune the model on. This corresponds to the ID in the dataset folder name (Dataset_{ID}_{Name}).
+
+The fine-tuning results (including the model weights) will be saved in the `selfChatBot_results` directory.
+
+Refer to the [Data Folder Structure](#dataset-folder-structure) and [Parameters JSON](#parameters-json) section for details on preparing datasets before fine-tuning.
 
 ## Authors
 Alan Bach, bachalan330@gmail.com
