@@ -12,6 +12,9 @@ selfchatbot
 - [What is selfchatbot?](#what-is-selfchatbot)
 - [Installation](#installation)
   - [Prerequisites](#prerequisites)
+- [Environment Variables](#environment-variables)
+  - [Required Variables](#required-variables)
+  - [Setting Environment Variables](#setting-environment-variables)
 - [Authors](#authors)
 
 
@@ -68,6 +71,49 @@ pip install .
 ```
 
 For more details about the installation process or dependencies, refer to the pyproject.toml.
+
+## Environment Variables
+
+selfchatbot requires several environment variables to be set for proper functionality. These variables determine the paths for storing raw data, preprocessed data, and results. You can declare these variables directly in your environment or use a `.env` file (built-in support is provided).
+
+### Required Variables
+
+- **`selfChatBot_raw`**: Path to the directory containing raw datasets.
+- **`selfChatBot_preprocessed`**: Path to the directory for storing preprocessed datasets.
+- **`selfChatBot_results`**: Path to the directory where results will be saved.
+
+### Setting Environment Variables
+
+1. **Using a `.env` File**
+   Create a `.env` file in the root directory of selfchatbot and add the following lines:
+
+    ```dotenv
+    selfChatBot_raw=/path/to/raw/datasets
+    selfChatBot_preprocessed=/path/to/preprocessed/datasets
+    selfChatBot_results=/path/to/results
+    ```
+
+2. **Setting Variables Manually**
+
+    On Linux/MacOS:
+    ```dotenv
+    export selfChatBot_raw=/path/to/raw/datasets
+    export selfChatBot_preprocessed=/path/to/preprocessed/datasets
+    export selfChatBot_results=/path/to/results
+    ```
+
+    On Windows (Command Prompt):
+    ```dotenv
+    set selfChatBot_raw=C:\path\to\raw\datasets
+    set selfChatBot_preprocessed=C:\path\to\preprocessed\datasets
+    set selfChatBot_results=C:\path\to\results
+    ```
+
+<h3>Notes</h3>
+
+- Ensure that the paths you provide are absolute paths for consistency.
+- The project will automatically detect and load the .env file if it exists.
+- For large datasets, ensure the directories have sufficient storage capacity.
 
 ## Authors
 Alan Bach, bachalan330@gmail.com
