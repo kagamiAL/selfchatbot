@@ -171,16 +171,17 @@ def get_lora_config(parameters: dict, base_model: AutoModelForCausalLM) -> LoraC
     )
 
 
-def get_model(parameters: dict) -> AutoModelForCausalLM:
+def get_model(parameters: dict, tokenizer: PreTrainedTokenizer) -> AutoModelForCausalLM:
     """Returns the model for fine-tuning
 
     Args:
         parameters (dict): parameters for fine-tuning
+        tokenizer (PreTrainedTokenizer): tokenizer for fine-tuning
 
     Returns:
         AutoModelForCausalLM: model for fine-tuning
     """
-    model: AutoModelForCausalLM
+    model: PreTrainedModel
     if parameters["type_fine_tune"] == "qlora":
         bnb_config = BitsAndBytesConfig(
             load_in_4bit=True,
@@ -198,6 +199,9 @@ def get_model(parameters: dict) -> AutoModelForCausalLM:
             parameters["model"],
             config=get_config(parameters),
         )
+        # Resize the model embeddings if necessary
+        if len(tokenizer) != model.get_input_embeddings().num_embeddings:
+            model.resize_token_embeddings(len(tokenizer))
     if parameters["type_fine_tune"] in ["lora", "qlora"]:
         return get_peft_model(model, get_lora_config(parameters, model))
     return model
@@ -258,10 +262,12 @@ def fine_tuning_loop(dataset_id: int):
     tokenizer = U.get_tokenizer(preprocessed_path, parameters["model"])
     if U.custom_tokenizer_exists(preprocessed_path):
         U.save_tokenizer(save_path, tokenizer)
-        save_resized_model(preprocessed_path, parameters["model"], tokenizer)
-    # ! I probably shouldn't be modifying the parameters directly here but it works I don't care
-    parameters["model"] = get_model_id(preprocessed_path, parameters)
-    model = get_model(parameters)
+        if parameters["type_fine_tune"] == "qlora":
+            # * Need to load resized model for qlora
+            save_resized_model(preprocessed_path, parameters["model"], tokenizer)
+            # ! I probably shouldn't be modifying the parameters directly here but it works I don't care
+            parameters["model"] = get_model_id(preprocessed_path, parameters)
+    model = get_model(parameters, tokenizer)
     chat_dataset = ChatDataset(get_corpora(preprocessed_path), tokenizer)
     # TODO: This is just me learning how to make my own training loop, I will use huggingface's more advanced training loop later
     train_size = int(parameters["dataset_split"] * len(chat_dataset))
