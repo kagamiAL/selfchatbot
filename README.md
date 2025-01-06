@@ -209,7 +209,7 @@ Each dataset folder in `selfChatBot_raw` must include a `parameters.json` file t
     - **Allowed Values:**
       - **`lora`**: Use LoRA fine-tuning (Low Rank Adaptation).
       - **`qlora`**: Use Quantized LoRA.
-      - **`fine_tune`**: Full model fine-tuning.
+      - **`finetune`**: Full model fine-tuning.
 3. **`max_length`**
     - **Description:** The maximum sequence length for training and inference.
     - **Example:** 1024 (recommended for GPT-2 models).
