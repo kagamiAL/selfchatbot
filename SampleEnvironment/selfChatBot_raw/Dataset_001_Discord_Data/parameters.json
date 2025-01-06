@@ -1,0 +1,10 @@
+{
+    "model": "gpt2-large",
+    "type_fine_tune": "lora",
+    "max_length": 1024,
+    "preprocessor_data": {
+        "DiscordChatExporter" : {
+            "username": "your_username_here_without_@"
+        }
+    }
+}

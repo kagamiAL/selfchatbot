@@ -1,0 +1,3 @@
+Text files can have any name, as long as it is a text file.
+Pretend this is an export from DiscordChatExporter
+You can add as many chat exports as you want to this folder
