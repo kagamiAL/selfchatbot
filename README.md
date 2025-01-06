@@ -40,6 +40,7 @@ look at the [Preprocessors](https://github.com/kagamiAL/selfchatbot/tree/main/sr
 - [Usage](#usage)
   - [Preprocessing](#preprocessing)
   - [Finetuning](#finetuning)
+  - [Playing with the Chat Model](#playing-with-the-chat-model)
 - [Authors](#authors)
 
 ## Installation
@@ -259,10 +260,13 @@ selfChatBot_preprocess -d 1
 ```
 This example preprocesses the dataset located in `selfChatBot_raw/Dataset_1_Discord_Data`.
 
-Preprocessed data will be saved in `selfChatBot_preprocessed/Dataset_1_Discord_Data`.
+<h4>Notes</h4>
+
+- The preprocessed data will be saved in the `selfChatBot_preprocessed` directory.
+- Refer to the [Data Folder Structure](#dataset-folder-structure) and [Parameters JSON](#parameters-json) section for details on preparing datasets before fine-tuning.
 
 ### Finetuning
-You are now ready to fine tune a model on your preprocessed data.
+You must have preprocessed your data before moving on to finetuning
 
 To fine-tune a model on a dataset, use the command-line tool `selfChatBot_train`. This command trains the model using preprocessed data from the specified dataset.
 
@@ -273,9 +277,50 @@ selfChatBot_train -d <Dataset_ID>
 ```
 - **`-d <Dataset_ID>`**: The unique ID of the dataset to fine-tune the model on. This corresponds to the ID in the dataset folder name (Dataset_{ID}_{Name}).
 
-The fine-tuning results (including the model weights) will be saved in the `selfChatBot_results` directory.
+<h4>Notes</h4>
 
-Refer to the [Data Folder Structure](#dataset-folder-structure) and [Parameters JSON](#parameters-json) section for details on preparing datasets before fine-tuning.
+- The fine-tuning results (including the model weights) will be saved in the `selfChatBot_results` directory.
+- Refer to the [Data Folder Structure](#dataset-folder-structure) and [Parameters JSON](#parameters-json) section for details on preparing datasets before fine-tuning.
+
+### Playing with the Chat Model
+
+To interact with the fine-tuned chat model, use the command-line tool `selfChatBot_play`. This command allows you to play with the model using either a session-based interaction or a prompt-based interaction.
+
+<h4>Command</h4>
+
+```bash
+selfChatBot_play -d <Dataset_ID> [-t <interaction_type>] [-p <prompt>] [-mt <model_type>]
+```
+
+- **`-d <Dataset_ID>`**: The unique ID of the dataset to use for interaction. This corresponds to the **`ID`** in the dataset folder name (**`Dataset_{ID}_{Name}`**).
+- **`-t <interaction_type>`**: (Optional) Specifies the type of interaction with the model.
+  - **`session`**: Initiates an ongoing chat session.
+  - **`prompt`**: Interacts with the model using a custom prompt.
+
+  Default is **`session.
+- **`-p <prompt>`**: (Required if **`-t prompt`** is selected) The custom prompt to use for the interaction when **`-t prompt`** is specified.
+- **`-mt <model_type>`**: (Optional) Specifies which model to use for interaction.
+  - **`best`**: Use the best-performing model (the one with the lowest validation loss).
+  - **`final`**: Use the final model after training.
+
+  Default is **`best`**.
+
+<h4>Example</h4>
+
+```bash
+selfChatBot_play -d 1 -t prompt -p "Hello, how are you?"
+```
+This example uses the dataset **`Dataset_1_Discord_Data`** and sends the prompt `"Hello, how are you?"` to the model for a prompt-based interaction.
+
+```bash
+selfChatBot_play -d 1 -t session
+```
+This example initiates a session-based interaction with the model, using the dataset **`Dataset_1_Discord_Data`**.
+
+<h4>Notes</h4>
+
+- Ensure that the fine-tuned model is available in the **`selfChatBot_results`** directory.
+- The model used for interaction can be the best model or the final model, depending on your preference.
 
 ## Authors
 Alan Bach, bachalan330@gmail.com
