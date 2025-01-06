@@ -9,6 +9,7 @@ from Classes.Preprocessors.preprocessor import Preprocessor
 from Classes.Schema import validate_json, schemas
 from Classes.Formatters.formatter import get_formatter
 from transformers import AutoTokenizer
+from dotenv import load_dotenv
 
 preprocessors: dict[str, Preprocessor] = {}
 
@@ -174,6 +175,7 @@ def main():
         Exception: If selfChatBot_raw variable is not set in environment
         Exception: If selfChatBot_preprocessed variable is not set in environment
     """
+    load_dotenv()
     parser = argparse.ArgumentParser(
         description="Preprocesses data from different sources contained in a Dataset"
     )
