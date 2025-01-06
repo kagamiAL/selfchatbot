@@ -8,6 +8,8 @@ from torch.optim import AdamW
 from torch.utils.data import random_split, DataLoader
 from os import environ as env
 from transformers import (
+    PreTrainedTokenizer,
+    PreTrainedModel,
     AutoModelForCausalLM,
     AutoConfig,
     Conv1D,
@@ -209,21 +211,46 @@ def get_model_id(preprocessed_path: str, parameters: dict) -> str:
     return parameters["model"]
 
 
+def save_resized_model(
+    directory_path: str, model_name: str, tokenizer: PreTrainedTokenizer
+):
+    """
+    Save a model with the correct vocabulary size, skip if it already exists
+
+    Args:
+        directory_path (str): The path to the directory to save the model
+        model_name (str): The name of the model to save
+        tokenizer (PreTrainedTokenizer): The tokenizer to use for resizing the model
+    """
+    save_path = osp.join(directory_path, "model")
+    # Check if the directory already exists so we don't create a new one
+    if not Path(save_path).is_dir():
+        Path(save_path).mkdir(exist_ok=True)
+        model: PreTrainedModel = AutoModelForCausalLM.from_pretrained(model_name)
+        model.resize_token_embeddings(len(tokenizer))
+        model.save_pretrained(save_path)
+
+
 def fine_tuning_loop(dataset_id: int):
     """Fine tune a model on a dataset
 
     Args:
         dataset_id (int): ID of the dataset
     """
-    dataset_path, dataset_name = U.get_path_to_dataset_and_name(
+    preprocessed_path, dataset_name = U.get_path_to_dataset_and_name(
         "selfChatBot_preprocessed", dataset_id
     )
-    parameters = get_params(dataset_path)
+    save_path = Path(osp.join(env["selfChatBot_results"], dataset_name))
+    save_path.mkdir(parents=True, exist_ok=True)
+    parameters = get_params(preprocessed_path)
     # TODO: This is just me learning how to make my own training loop, I will use huggingface's more advanced training loop later
-    parameters["model"] = get_model_id(dataset_path, parameters)
-    tokenizer = U.get_tokenizer(dataset_path, parameters["model"])
+    tokenizer = U.get_tokenizer(preprocessed_path, parameters["model"])
+    if U.custom_tokenizer_exists(preprocessed_path):
+        U.save_tokenizer(save_path, tokenizer)
+        save_resized_model(preprocessed_path, parameters["model"], tokenizer)
+    parameters["model"] = get_model_id(preprocessed_path, parameters)
     model = get_model(parameters)
-    chat_dataset = ChatDataset(get_corpora(dataset_path), tokenizer)
+    chat_dataset = ChatDataset(get_corpora(preprocessed_path), tokenizer)
     train_size = int(parameters["dataset_split"] * len(chat_dataset))
     val_size = len(chat_dataset) - train_size
     train_dataset, val_dataset = random_split(chat_dataset, [train_size, val_size])
@@ -244,7 +271,6 @@ def fine_tuning_loop(dataset_id: int):
         num_warmup_steps=int(parameters["warmup_steps_percent"] * total_steps),
         num_training_steps=total_steps,
     )
-    save_path = Path(osp.join(env["selfChatBot_results"], dataset_name))
     q_lora_args = (
         {
             "fp16": True,
@@ -253,7 +279,6 @@ def fine_tuning_loop(dataset_id: int):
         if parameters["type_fine_tune"] == "qlora"
         else {}
     )
-    save_path.mkdir(parents=True, exist_ok=True)
     save_default_generation_params(save_path, parameters)
     with open(save_path.joinpath("debug.json"), "w") as f:
         json.dump(parameters, f, indent="\t", separators=(",", ": "))
@@ -267,8 +292,6 @@ def fine_tuning_loop(dataset_id: int):
         **q_lora_args,
     )
     model.config.use_cache = False
-    if U.custom_tokenizer_exists(dataset_path):
-        U.save_tokenizer(save_path, tokenizer)
     finetuner.fine_tune(parameters["epochs"])
 
 
