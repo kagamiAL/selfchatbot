@@ -41,7 +41,7 @@ def get_chat_model_arguments(model_path: str, args: argparse.Namespace) -> tuple
     model: AutoModelForCausalLM = AutoModelForCausalLM.from_pretrained(
         path.joinpath(args.mt), **model_kwargs
     )
-    return model, AutoTokenizer.from_pretrained(parameters["model"]), parameters
+    return model, U.get_tokenizer(model_path, parameters["model"]), parameters
 
 
 def main():
