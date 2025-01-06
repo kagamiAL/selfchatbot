@@ -19,6 +19,7 @@ from transformers import (
 from Classes.FineTuners.fine_tuner import FineTuner
 from Classes.Datasets.chat_dataset import ChatDataset
 from peft import get_peft_model, LoraConfig, TaskType, prepare_model_for_kbit_training
+from dotenv import load_dotenv
 
 
 def get_specific_layer_names(model: AutoModelForCausalLM) -> list[str]:
@@ -311,6 +312,7 @@ def main():
         Exception: If selfChatBot_preprocessed variable is not set in environment
         Exception: If selfChatBot_results variable is not set in environment
     """
+    load_dotenv()
     parser = argparse.ArgumentParser(description="Fine tune a model on a dataset")
     parser.add_argument(
         "-d",

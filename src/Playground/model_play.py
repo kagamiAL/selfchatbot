@@ -6,6 +6,7 @@ from os import environ as env
 from pathlib import Path
 from Classes.ChatModels.chat_model import ChatModel
 from transformers import AutoModelForCausalLM, AutoTokenizer
+from dotenv import load_dotenv
 
 
 def get_json_data(json_path: Path) -> dict:
@@ -45,6 +46,7 @@ def get_chat_model_arguments(model_path: str, args: argparse.Namespace) -> tuple
 
 
 def main():
+    load_dotenv()
     parser = argparse.ArgumentParser(description="Play with a chat model")
     parser.add_argument(
         "-d", type=int, help="The ID of the dataset to play on", required=True
