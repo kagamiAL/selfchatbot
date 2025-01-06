@@ -1,5 +1,5 @@
-# SelfChatBot
-SelfChatBot is a LM fine tuning pipeline to fine tune HuggingFace
+# selfchatbot
+selfchatbot is a LM fine tuning pipeline to fine tune HuggingFace
 base LMs to talk like you
 
 **Disclaimer:** This project is a personal learning experience rather than
