@@ -171,6 +171,19 @@ def get_lora_config(parameters: dict, base_model: AutoModelForCausalLM) -> LoraC
     )
 
 
+def custom_tokenizer_exists(path: str) -> bool:
+    """Checks if a custom tokenizer exists at the given path
+
+    Args:
+        path (str): The path to the preprocessed dataset
+
+    Returns:
+        bool: True if a custom tokenizer exists, False otherwise
+    """
+
+    return Path(path).joinpath("tokenizer").is_dir()
+
+
 def get_model(parameters: dict, tokenizer: PreTrainedTokenizer) -> AutoModelForCausalLM:
     """Returns the model for fine-tuning
 
@@ -260,7 +273,7 @@ def fine_tuning_loop(dataset_id: int):
     # * Save parameters before I start modifying them
     save_results_json_data(save_path, parameters)
     tokenizer = U.get_tokenizer(preprocessed_path, parameters["model"])
-    if U.custom_tokenizer_exists(preprocessed_path):
+    if custom_tokenizer_exists(preprocessed_path):
         U.save_tokenizer(save_path, tokenizer)
         if parameters["type_fine_tune"] == "qlora":
             # * Need to load resized model for qlora

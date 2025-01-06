@@ -24,19 +24,6 @@ def get_path_to_dataset_and_name(variable: str, dataset_id: int) -> tuple[str, s
     raise FileNotFoundError(f"Dataset with ID {dataset_id} not found")
 
 
-def custom_tokenizer_exists(path: str) -> bool:
-    """Checks if a custom tokenizer exists at the given path
-
-    Args:
-        path (str): The path to the preprocessed dataset
-
-    Returns:
-        bool: True if a custom tokenizer exists, False otherwise
-    """
-
-    return Path(path).joinpath("tokenizer").is_dir()
-
-
 def get_tokenizer(path: str, model_name: str) -> PreTrainedTokenizer:
     """Returns the tokenizer to use based on if a custom tokenizer is found at path
 
