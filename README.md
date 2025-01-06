@@ -7,23 +7,6 @@ selfchatbot
   <a href="https://huggingface.co/"><img src="https://img.shields.io/badge/%F0%9F%A4%97-Models-yellow"/></a>
 </p>
 
-<h2>Table of Contents</h2>
-
-- [What is selfchatbot?](#what-is-selfchatbot)
-- [Installation](#installation)
-  - [Prerequisites](#prerequisites)
-- [Environment Variables](#environment-variables)
-  - [Required Variables](#required-variables)
-  - [Setting Environment Variables](#setting-environment-variables)
-- [Dataset Folder Structure](#dataset-folder-structure)
-  - [Folder Naming Convention](#folder-naming-convention)
-    - [Examples](#examples)
-  - [Contents of Each Dataset Folder](#contents-of-each-dataset-folder)
-  - [Example Directory Layout](#example-directory-layout)
-- [Authors](#authors)
-
-
-## What is selfchatbot?
 **selfchatbot** is a LM fine tuning pipeline to fine tune
 base HuggingFace LMs to talk like you.
 
@@ -38,6 +21,23 @@ other message formats can be supported.
 Documentation on how to add your own message format support will be added
 later. If you want to add support for a new message format now you can
 look at the [Preprocessors](https://github.com/kagamiAL/selfchatbot/tree/main/src/Classes/Preprocessors).
+
+<h2>Table of Contents</h2>
+
+- [Installation](#installation)
+  - [Prerequisites](#prerequisites)
+- [Environment Variables](#environment-variables)
+  - [Required Variables](#required-variables)
+  - [Setting Environment Variables](#setting-environment-variables)
+- [Dataset Folder Structure](#dataset-folder-structure)
+  - [Folder Naming Convention](#folder-naming-convention)
+    - [Examples](#examples)
+  - [Contents of Each Dataset Folder](#contents-of-each-dataset-folder)
+  - [Example Directory Layout](#example-directory-layout)
+- [Parameters JSON](#parameters-json)
+  - [Sample `parameters.json`](#sample-parametersjson)
+  - [Field Descriptions](#field-descriptions)
+- [Authors](#authors)
 
 ## Installation
 
@@ -142,7 +142,7 @@ Dataset_`ID`_`Name`
 ### Contents of Each Dataset Folder
 
 1. **`parameters.json`**
-    - Each dataset folder must contain a `parameters.json` file, specifying fine-tuning parameters. See the [Parameters](#parameters) section for more details.
+    - Each dataset folder must contain a `parameters.json` file, specifying fine-tuning parameters. See the [Parameters](#parameters-json) section for more details.
 
 2. Sub-Folders for Message Formats
     - Each dataset folder contains sub-folders named after the format of the .txt files they contain. Examples of sub-folder names include:
@@ -177,6 +177,64 @@ For more clarity, you can look at the [SampleEnvironment](https://github.com/kag
 - Choose meaningful names for Name to easily identify datasets.
 - Ensure the parameters.json file is present in every dataset folder and contains all required parameters.
 - Sub-folder names must reflect the format of their .txt files for clarity and proper processing.
+
+
+## Parameters JSON
+
+Each dataset folder in `selfChatBot_raw` must include a `parameters.json` file that specifies the parameters for fine-tuning. Below is an example and detailed explanation of the structure and its fields.
+
+### Sample `parameters.json`
+
+```json
+{
+    "model": "gpt2-large",
+    "type_fine_tune": "lora",
+    "max_length": 1024, // Defaults to 1024 if not specified
+    "preprocessor_data": {
+        "DiscordChatExporter" : {
+            "username": "your_username_here_without_@"
+        }
+    }
+}
+```
+
+### Field Descriptions
+1. **`model`**
+   - **Description:** Specifies the base model to use for fine-tuning.
+   - **Example:** `"gpt2-large"`, `"gpt2-xl"`, `"EleutherAI/gpt-neo-1.3B"`
+2. **`type_fine_tune`**
+    - **Description:** Defines the fine-tuning method.
+    - **Allowed Values:**
+      - **`lora`**: Use LoRA fine-tuning (Low Rank Adaptation).
+      - **`qlora`**: Use Quantized LoRA.
+      - **`fine_tune`**: Full model fine-tuning.
+3. **`max_length`**
+    - **Description:** The maximum sequence length for training and inference.
+    - **Example:** 1024 (recommended for GPT-2 models).
+4. **`preprocessor_data`**
+    - **Description:** A nested field containing dataset-specific preprocessing parameters.
+    - **Structure:**
+      - The keys are the names of sub-folder formats (e.g., `DiscordChatExporter`, `SlackExporter`).
+      - Each key maps to an object with format-specific settings.
+
+    **Example for `DiscordChatExporter`:**
+    ```json
+    "preprocessor_data": {
+        "DiscordChatExporter": {
+            "username": "your_username_here_without_@"
+        }
+    }
+    ```
+    - **Field:** **`username`**
+      - **Description:**  Your Discord username without the @.
+      - **Example:** `"john_doe"`
+
+
+<h3>Notes</h3>
+
+- Make sure all fields are correctly defined; missing or invalid values can cause errors during fine-tuning.
+- The preprocessor_data field is optional but must be included if specific preprocessing is required for the dataset's format.
+- For fine-tuning with different methods (lora, qlora, or finetune), ensure the base model and parameters are compatible with the chosen method
 
 ## Authors
 Alan Bach, bachalan330@gmail.com
