@@ -103,8 +103,7 @@ def preprocess_data(args: argparse.Namespace):
     preprocess_parameters = get_preprocess_parameters(dataset_path)
     tokenizer = AutoTokenizer.from_pretrained(preprocess_parameters["model"])
     formatter = get_formatter(preprocess_parameters["model"], tokenizer)
-    if formatter.add_special_tokens_to_tokenizer():
-        U.save_tokenizer(directory_path, tokenizer)
+    formatter.add_special_tokens_to_tokenizer()
     processed_text = []
     for data_format in os.listdir(dataset_path):
         if not data_format in preprocessors:

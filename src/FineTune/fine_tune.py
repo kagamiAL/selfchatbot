@@ -11,6 +11,7 @@ from transformers import (
     PreTrainedTokenizer,
     PreTrainedModel,
     AutoModelForCausalLM,
+    AutoTokenizer,
     AutoConfig,
     Conv1D,
     BitsAndBytesConfig,
@@ -20,6 +21,7 @@ from Classes.FineTuners.fine_tuner import FineTuner
 from Classes.Datasets.chat_dataset import ChatDataset
 from peft import get_peft_model, LoraConfig, TaskType, prepare_model_for_kbit_training
 from dotenv import load_dotenv
+from Classes.Formatters.formatter import get_formatter
 
 
 def get_specific_layer_names(model: AutoModelForCausalLM) -> list[str]:
@@ -220,15 +222,6 @@ def get_model(parameters: dict, tokenizer: PreTrainedTokenizer) -> AutoModelForC
     return model
 
 
-def get_model_id(preprocessed_path: str, parameters: dict) -> str:
-    """Returns the path to the model, if it exists, else the model name from parameters"""
-
-    path = Path(preprocessed_path).joinpath("model")
-    if path.is_dir():
-        return str(path)
-    return parameters["model"]
-
-
 def save_resized_model(
     directory_path: str, model_name: str, tokenizer: PreTrainedTokenizer
 ):
@@ -270,16 +263,18 @@ def fine_tuning_loop(dataset_id: int):
     save_path = Path(osp.join(env["selfChatBot_results"], dataset_name))
     save_path.mkdir(parents=True, exist_ok=True)
     parameters = get_params(preprocessed_path)
+    base_model_name: str = parameters["model"]
     # * Save parameters before I start modifying them
     save_results_json_data(save_path, parameters)
-    tokenizer = U.get_tokenizer(preprocessed_path, parameters["model"])
-    if custom_tokenizer_exists(preprocessed_path):
-        U.save_tokenizer(save_path, tokenizer)
-        if parameters["type_fine_tune"] == "qlora":
-            # * Need to load resized model for qlora
-            save_resized_model(preprocessed_path, parameters["model"], tokenizer)
-            # ! I probably shouldn't be modifying the parameters directly here but it works I don't care
-            parameters["model"] = get_model_id(preprocessed_path, parameters)
+    tokenizer = AutoTokenizer.from_pretrained(base_model_name)
+    formatter = get_formatter(base_model_name, tokenizer)
+    if (
+        formatter.add_special_tokens_to_tokenizer()
+        and parameters["type_fine_tune"] == "qlora"
+    ):
+        # * Need to load resized model for qlora
+        # ! I probably shouldn't be modifying the parameters directly here but it works I don't care
+        parameters["model"] = U.get_resized_model_path(base_model_name, formatter)
     model = get_model(parameters, tokenizer)
     chat_dataset = ChatDataset(get_corpora(preprocessed_path), tokenizer)
     # TODO: This is just me learning how to make my own training loop, I will use huggingface's more advanced training loop later
