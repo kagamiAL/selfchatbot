@@ -1,9 +1,24 @@
 import os
 import re
-import os.path as osp
 from pathlib import Path
 from os import environ as env
-from transformers import AutoTokenizer, PreTrainedTokenizer
+from transformers import AutoModelForCausalLM, PreTrainedModel
+from Classes.Formatters.formatter import Formatter
+from pathlib import Path
+from shutil import rmtree
+
+
+def clear_directory(directory_path: Path) -> None:
+    """Clears the directory at the given path
+
+    Args:
+        directory_path (str): The path to the directory to clear
+    """
+    for path in directory_path.glob("**/*"):
+        if path.is_file():
+            path.unlink()
+        elif path.is_dir():
+            rmtree(path)
 
 
 def get_path_to_dataset_and_name(variable: str, dataset_id: int) -> tuple[str, str]:
@@ -24,31 +39,29 @@ def get_path_to_dataset_and_name(variable: str, dataset_id: int) -> tuple[str, s
     raise FileNotFoundError(f"Dataset with ID {dataset_id} not found")
 
 
-def get_tokenizer(path: str, model_name: str) -> PreTrainedTokenizer:
-    """Returns the tokenizer to use based on if a custom tokenizer is found at path
+def get_resized_model_path(base_model: str, formatter: Formatter) -> str:
+    """Returns the path to the resized model for the given base model and formatter
 
     Args:
-        path (str): The path to the preprocessed dataset
-        model_name (str): The name of the model to use as a fallback
+        base_model (str): The name of the base model
+        formatter (Formatter): The formatter to use for resizing the model
 
     Returns:
-        PreTrainedTokenizer: The tokenizer to use
+        str: The path to the resized model
     """
-    path = Path(path).joinpath("tokenizer")
-    if path.is_dir():
-        return AutoTokenizer.from_pretrained(path)
-    return AutoTokenizer.from_pretrained(model_name)
-
-
-def save_tokenizer(directory_path: str, tokenizer: PreTrainedTokenizer):
-    """
-    Saves a custom tokenizer to a specified directory.
-
-    Args:
-        directory_path (str): The path to the directory where the tokenizer should be saved.
-        tokenizer (PreTrainedTokenizer): The tokenizer to be saved.
-    """
-
-    save_path = osp.join(directory_path, "tokenizer")
-    Path(save_path).mkdir(exist_ok=True)
-    tokenizer.save_pretrained(save_path)
+    resized_path: Path = (
+        Path(env["selfChatBot_results"])
+        .joinpath(".cache")
+        .joinpath(f"{base_model}_{formatter.MODEL_NAME}")
+    )
+    resized_path.mkdir(parents=True, exist_ok=True)
+    try:
+        model: PreTrainedModel = AutoModelForCausalLM.from_pretrained(resized_path)
+    except:
+        print(f"Cached model does not exist or is corrupted, re-downloading")
+        model = AutoModelForCausalLM.from_pretrained(base_model)
+    if model.get_input_embeddings().num_embeddings != len(formatter.tokenizer):
+        clear_directory(resized_path)
+        model.resize_token_embeddings(len(formatter.tokenizer))
+        model.save_pretrained(resized_path)
+    return str(resized_path.absolute())
