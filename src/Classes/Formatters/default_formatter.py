@@ -15,7 +15,7 @@ class DefaultFormatter(Formatter):
         "{% for message in messages %}{{'<|start_header_id|>' + message['role'] + '<|end_header_id|>' + message['content'] + '<|eot_id|>'}}{% endfor %}"
         "{% if add_generation_prompt %}{{ '<|start_header_id|>assistant<|end_header_id|>' }}{% endif %}"
     )
-    SPECIAL_TOKENS = ["<|start_header_id|>", "<|end_header_id|>", "<|eot_id|>"]
+    SPECIAL_TOKENS = ["<|start_header_id|>", "<|end_header_id|>"]
 
     @override
     def __init__(self, tokenizer):
@@ -24,7 +24,11 @@ class DefaultFormatter(Formatter):
             warn(
                 "There already is a chat template set in the tokenizer, this will be overwritten"
             )
-        self.tokenizer.chat_template = self.CHAT_TEMPLATE
+        if self.tokenizer.eos_token is None:
+            self.tokenizer.eos_token = "<|eot_id|>"
+        self.tokenizer.chat_template = self.CHAT_TEMPLATE.replace(
+            "<|eot_id|>", self.tokenizer.eos_token
+        )
 
     @override
     def format_block(self, block: list[MessagePacket]) -> str:
