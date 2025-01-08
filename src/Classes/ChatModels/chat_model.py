@@ -1,25 +1,28 @@
 import torch.nn.functional as F
 from collections import deque
-from Classes.Formatters.formatter import Formatter, get_formatter
+from Classes.Formatters.formatter import Formatter
 from Classes.TypeDicts import MessagePacket
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import (
+    PreTrainedModel,
+    PreTrainedTokenizer,
+)
 
 
 class ChatModel:
     MAX_LENGTH = 1024
-    model: AutoModelForCausalLM
-    tokenizer: AutoTokenizer
+    model: PreTrainedModel
+    tokenizer: PreTrainedTokenizer
     history: list[MessagePacket]
     generation_params: dict
     formatter: Formatter
 
-    def __init__(self, model, tokenizer, params: dict):
+    def __init__(self, model: PreTrainedModel, formatter: Formatter, params: dict):
         model.eval()
         self.history = []
         self.generation_params = params
         self.model = model
-        self.tokenizer = tokenizer
-        self.formatter = get_formatter(params["model"], self.tokenizer)
+        self.tokenizer = formatter.tokenizer
+        self.formatter = formatter
         self.MAX_LENGTH = params["max_length"]
         self.MAX_LENGTH = min(self.MAX_LENGTH, self.tokenizer.model_max_length)
 
@@ -107,8 +110,6 @@ class ChatModel:
         # Find the best sequence
         best_sequence_idx = normalized_scores.index(max(normalized_scores))
         best_sequence = sequences[best_sequence_idx]
-
-        print(f"DEBUG: {repr(self.tokenizer.decode(best_sequence))}")
 
         return self.formatter.filter_output(
             encoded_prompt["input_ids"].squeeze(0), best_sequence

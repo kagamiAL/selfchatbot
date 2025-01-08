@@ -2,11 +2,14 @@ import argparse
 import json
 import os.path as osp
 import torch
+import Util.utilities as U
 from pathlib import Path
 from torch.optim import AdamW
 from torch.utils.data import random_split, DataLoader
 from os import environ as env
 from transformers import (
+    PreTrainedTokenizer,
+    PreTrainedModel,
     AutoModelForCausalLM,
     AutoTokenizer,
     AutoConfig,
@@ -16,9 +19,9 @@ from transformers import (
 )
 from Classes.FineTuners.fine_tuner import FineTuner
 from Classes.Datasets.chat_dataset import ChatDataset
-from DataProcessing.preprocess_data import get_path_to_dataset_and_name
 from peft import get_peft_model, LoraConfig, TaskType, prepare_model_for_kbit_training
 from dotenv import load_dotenv
+from Classes.Formatters.formatter import get_formatter
 
 
 def get_specific_layer_names(model: AutoModelForCausalLM) -> list[str]:
@@ -42,37 +45,6 @@ def get_specific_layer_names(model: AutoModelForCausalLM) -> list[str]:
             if layer:
                 layer_names.append(layer)
     return list(set(layer_names))
-
-
-def printProgressBar(
-    iteration,
-    total,
-    prefix="",
-    suffix="",
-    decimals=1,
-    length=100,
-    fill="█",
-    printEnd="\r",
-):
-    """
-    Call in a loop to create terminal progress bar
-    @params:
-        iteration   - Required  : current iteration (Int)
-        total       - Required  : total iterations (Int)
-        prefix      - Optional  : prefix string (Str)
-        suffix      - Optional  : suffix string (Str)
-        decimals    - Optional  : positive number of decimals in percent complete (Int)
-        length      - Optional  : character length of bar (Int)
-        fill        - Optional  : bar fill character (Str)
-        printEnd    - Optional  : end character (e.g. "\r", "\r\n") (Str)
-    """
-    percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
-    filledLength = int(length * iteration // total)
-    bar = fill * filledLength + "-" * (length - filledLength)
-    print(f"\r{prefix} |{bar}| {percent}% {suffix}", end=printEnd)
-    # Print New Line on Complete
-    if iteration == total:
-        print()
 
 
 def get_params(dataset_path: str) -> dict:
@@ -170,16 +142,17 @@ def get_lora_config(parameters: dict, base_model: AutoModelForCausalLM) -> LoraC
     )
 
 
-def get_model(parameters: dict) -> AutoModelForCausalLM:
+def get_model(parameters: dict, tokenizer: PreTrainedTokenizer) -> AutoModelForCausalLM:
     """Returns the model for fine-tuning
 
     Args:
         parameters (dict): parameters for fine-tuning
+        tokenizer (PreTrainedTokenizer): tokenizer for fine-tuning
 
     Returns:
         AutoModelForCausalLM: model for fine-tuning
     """
-    model: AutoModelForCausalLM
+    model: PreTrainedModel
     if parameters["type_fine_tune"] == "qlora":
         bnb_config = BitsAndBytesConfig(
             load_in_4bit=True,
@@ -197,12 +170,21 @@ def get_model(parameters: dict) -> AutoModelForCausalLM:
             parameters["model"],
             config=get_config(parameters),
         )
-    if (
-        parameters["type_fine_tune"] == "lora"
-        or parameters["type_fine_tune"] == "qlora"
-    ):
+        # Resize the model embeddings if necessary
+        if len(tokenizer) != model.get_input_embeddings().num_embeddings:
+            model.resize_token_embeddings(len(tokenizer))
+    if parameters["type_fine_tune"] in ["lora", "qlora"]:
         return get_peft_model(model, get_lora_config(parameters, model))
     return model
+
+
+def save_results_json_data(save_path: Path, parameters: dict):
+    """Saves the parameters as debug.json and the default generation parameters
+    to parameters.json in the given save_path
+    """
+    save_default_generation_params(save_path, parameters)
+    with open(save_path.joinpath("debug.json"), "w") as f:
+        json.dump(parameters, f, indent="\t", separators=(",", ": "))
 
 
 def fine_tuning_loop(dataset_id: int):
@@ -211,17 +193,27 @@ def fine_tuning_loop(dataset_id: int):
     Args:
         dataset_id (int): ID of the dataset
     """
-    dataset_path, dataset_name = get_path_to_dataset_and_name(
+    preprocessed_path, dataset_name = U.get_path_to_dataset_and_name(
         "selfChatBot_preprocessed", dataset_id
     )
-    parameters = get_params(dataset_path)
+    save_path = Path(osp.join(env["selfChatBot_results"], dataset_name))
+    save_path.mkdir(parents=True, exist_ok=True)
+    parameters = get_params(preprocessed_path)
+    base_model_name: str = parameters["model"]
+    # * Save parameters before I start modifying them
+    save_results_json_data(save_path, parameters)
+    tokenizer = AutoTokenizer.from_pretrained(base_model_name)
+    formatter = get_formatter(base_model_name, tokenizer)
+    if (
+        formatter.add_special_tokens_to_tokenizer()
+        and parameters["type_fine_tune"] == "qlora"
+    ):
+        # * Need to load resized model for qlora
+        # ! I probably shouldn't be modifying the parameters directly here but it works I don't care
+        parameters["model"] = U.get_resized_model_path(base_model_name, formatter)
+    model = get_model(parameters, tokenizer)
+    chat_dataset = ChatDataset(get_corpora(preprocessed_path), tokenizer)
     # TODO: This is just me learning how to make my own training loop, I will use huggingface's more advanced training loop later
-    # TODO: Let people add custom special tokens to the tokenizer if they want, and save the tokenizer as well
-    model = get_model(parameters)
-    chat_dataset = ChatDataset(
-        get_corpora(dataset_path),
-        AutoTokenizer.from_pretrained(parameters["model"]),
-    )
     train_size = int(parameters["dataset_split"] * len(chat_dataset))
     val_size = len(chat_dataset) - train_size
     train_dataset, val_dataset = random_split(chat_dataset, [train_size, val_size])
@@ -242,7 +234,6 @@ def fine_tuning_loop(dataset_id: int):
         num_warmup_steps=int(parameters["warmup_steps_percent"] * total_steps),
         num_training_steps=total_steps,
     )
-    save_path = Path(osp.join(env["selfChatBot_results"], dataset_name))
     q_lora_args = (
         {
             "fp16": True,
@@ -251,10 +242,6 @@ def fine_tuning_loop(dataset_id: int):
         if parameters["type_fine_tune"] == "qlora"
         else {}
     )
-    save_path.mkdir(parents=True, exist_ok=True)
-    save_default_generation_params(save_path, parameters)
-    with open(save_path.joinpath("debug.json"), "w") as f:
-        json.dump(parameters, f, indent="\t", separators=(",", ": "))
     finetuner = FineTuner(
         model=model,
         optimizer=optimizer,

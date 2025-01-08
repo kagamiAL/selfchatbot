@@ -1,4 +1,4 @@
-import re
+import Util.utilities as U
 import argparse
 import os
 import os.path as osp
@@ -11,25 +11,8 @@ from Classes.Formatters.formatter import get_formatter
 from transformers import AutoTokenizer
 from dotenv import load_dotenv
 
+
 preprocessors: dict[str, Preprocessor] = {}
-
-
-def get_path_to_dataset_and_name(variable: str, dataset_id: int) -> tuple[str, str]:
-    """Returns the path to the dataset with ID dataset_id
-
-    Args:
-        variable (str): name of the environment variable
-        dataset_id (int): ID of the dataset
-
-    Returns:
-        tuple[str, str]: path to the dataset and name of the dataset
-    """
-    for dataset in os.listdir(env[variable]):
-        result = re.findall(f"Dataset_\\d+", dataset)
-        if result:
-            if int(result[0].split("_")[1]) == dataset_id:
-                return os.path.join(env[variable], dataset), dataset
-    raise FileNotFoundError(f"Dataset with ID {dataset_id} not found")
 
 
 def get_preprocess_parameters(dataset_path: str) -> dict:
@@ -112,13 +95,16 @@ def preprocess_data(args: argparse.Namespace):
     """
     dataset_id = args.d
     # Get the path to the dataset and the name of the dataset
-    dataset_path, dataset_name = get_path_to_dataset_and_name(
+    dataset_path, dataset_name = U.get_path_to_dataset_and_name(
         "selfChatBot_raw", dataset_id
     )
+    directory_path = osp.join(env["selfChatBot_preprocessed"], dataset_name)
+    Path(directory_path).mkdir(exist_ok=True)
     preprocess_parameters = get_preprocess_parameters(dataset_path)
-    processed_text = []
     tokenizer = AutoTokenizer.from_pretrained(preprocess_parameters["model"])
     formatter = get_formatter(preprocess_parameters["model"], tokenizer)
+    formatter.add_special_tokens_to_tokenizer()
+    processed_text = []
     for data_format in os.listdir(dataset_path):
         if not data_format in preprocessors:
             continue
@@ -133,8 +119,6 @@ def preprocess_data(args: argparse.Namespace):
                 continue
             with open(osp.join(format_path, file), "r", encoding="utf-8") as f:
                 processed_text.append(preprocessor.preprocess(f.read()))
-    directory_path = osp.join(env["selfChatBot_preprocessed"], dataset_name)
-    Path(directory_path).mkdir(exist_ok=True)
     with open(
         osp.join(directory_path, "corpora.txt"),
         "w",
