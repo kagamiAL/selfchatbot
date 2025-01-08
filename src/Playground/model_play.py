@@ -5,7 +5,7 @@ import Util.utilities as U
 from os import environ as env
 from pathlib import Path
 from Classes.ChatModels.chat_model import ChatModel
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from peft import PeftModel
 from Classes.Formatters.formatter import get_formatter
 from dotenv import load_dotenv
@@ -51,7 +51,12 @@ def get_chat_model_arguments(model_path: str, args: argparse.Namespace) -> tuple
 
     # Adjust parameters for QLoRA if needed
     if parameters["type_fine_tune"] == "qlora":
-        model_kwargs["load_in_4bit"] = True
+        model_kwargs["quantization_config"] = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_compute_dtype=torch.bfloat16,
+            bnb_4bit_use_double_quant=True,
+            bnb_4bit_quant_type="nf4",
+        )
         if is_tokenizer_resized:
             parameters["model"] = U.get_resized_model_path(base_model_name, formatter)
 
