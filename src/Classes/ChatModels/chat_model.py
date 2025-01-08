@@ -1,3 +1,4 @@
+import torch
 import torch.nn.functional as F
 from collections import deque
 from Classes.Formatters.formatter import Formatter
@@ -15,6 +16,7 @@ class ChatModel:
     history: list[MessagePacket]
     generation_params: dict
     formatter: Formatter
+    device: str
 
     def __init__(self, model: PreTrainedModel, formatter: Formatter, params: dict):
         model.eval()
@@ -23,6 +25,7 @@ class ChatModel:
         self.model = model
         self.tokenizer = formatter.tokenizer
         self.formatter = formatter
+        self.device = torch.cuda.is_available() and "cuda" or "cpu"
         self.MAX_LENGTH = params["max_length"]
         self.MAX_LENGTH = min(self.MAX_LENGTH, self.tokenizer.model_max_length)
 
@@ -50,6 +53,8 @@ class ChatModel:
             encoding = self.formatter.get_prompt_encoding(block)
         if not block:
             raise ValueError("Prompt is too long for given max length")
+        encoding["input_ids"] = encoding["input_ids"].to(self.device)
+        encoding["attention_mask"] = encoding["attention_mask"].to(self.device)
         return encoding
 
     def __generate(self, input_ids):
@@ -89,7 +94,7 @@ class ChatModel:
         encoded_prompt = self.__get_encoding(prompt, history)
         output = self.__generate(encoded_prompt)
         # Decode sequences and extract token-wise scores
-        sequences = output.sequences
+        sequences = output.sequences.to("cpu")
         scores = output.scores  # List of token logits at each step
 
         # Calculate log-probabilities for each sequence
@@ -112,7 +117,7 @@ class ChatModel:
         best_sequence = sequences[best_sequence_idx]
 
         return self.formatter.filter_output(
-            encoded_prompt["input_ids"].squeeze(0), best_sequence
+            encoded_prompt["input_ids"].to("cpu").squeeze(0), best_sequence
         )
 
     def prompt_for_responses(
@@ -130,8 +135,10 @@ class ChatModel:
         passed_prompt = passed_prompt.strip()
         encoding = self.__get_encoding(passed_prompt, history)
         return [
-            self.formatter.filter_output(encoding["input_ids"].squeeze(0), seq)
-            for seq in self.__generate(encoding)
+            self.formatter.filter_output(
+                encoding["input_ids"].to("cpu").squeeze(0), seq.to("cpu")
+            )
+            for seq in self.__generate(encoding).sequences
         ]
 
     def add_to_history(self, prompt: str, response: str):
