@@ -6,6 +6,8 @@ from os import environ as env
 from pathlib import Path
 from Classes.ChatModels.chat_model import ChatModel
 from transformers import AutoModelForCausalLM, AutoTokenizer
+from peft import PeftModel
+from Classes.Formatters.formatter import get_formatter
 from dotenv import load_dotenv
 
 
@@ -32,17 +34,45 @@ def get_chat_model_arguments(model_path: str, args: argparse.Namespace) -> tuple
     Returns:
         tuple: The arguments to use for the chat model, (model, tokenizer, params)
     """
-    path: Path = Path(model_path)
-    parameters: dict = get_json_data(path.joinpath("parameters.json"))
-    model_kwargs = {}
-    if torch.cuda.is_available():
-        model_kwargs["device_map"] = "auto"
-        if parameters["type_fine_tune"] == "qlora":
-            model_kwargs["load_in_4bit"] = True
-    model: AutoModelForCausalLM = AutoModelForCausalLM.from_pretrained(
-        path.joinpath(args.mt), **model_kwargs
-    )
-    return model, U.get_tokenizer(model_path, parameters["model"]), parameters
+
+    # Define paths and load parameters
+    parameters_path = Path(model_path) / "parameters.json"
+    model_type_path = Path(model_path) / args.mt
+    parameters = get_json_data(parameters_path)
+    base_model_name: str = parameters["model"]
+
+    # Initialize tokenizer and formatter
+    tokenizer = AutoTokenizer.from_pretrained(base_model_name)
+    formatter = get_formatter(base_model_name, tokenizer)
+
+    # Prepare model kwargs and check for resizing
+    model_kwargs = {"device_map": "auto"}
+    is_tokenizer_resized: bool = formatter.add_special_tokens_to_tokenizer()
+
+    # Adjust parameters for QLoRA if needed
+    if parameters["type_fine_tune"] == "qlora":
+        model_kwargs["load_in_4bit"] = True
+        if is_tokenizer_resized:
+            parameters["model"] = U.get_resized_model_path(base_model_name, formatter)
+
+    # Load the model based on fine-tuning type
+    if parameters["type_fine_tune"] in ["lora", "qlora"]:
+        # Load base model or resized model if lora or qlora
+        model = AutoModelForCausalLM.from_pretrained(
+            parameters["model"], **model_kwargs
+        )
+    else:
+        model = AutoModelForCausalLM.from_pretrained(model_type_path, **model_kwargs)
+
+    # Resize token embeddings if required
+    if is_tokenizer_resized and parameters["type_fine_tune"] != "qlora":
+        model.resize_token_embeddings(len(formatter.tokenizer))
+
+    # Apply PEFT for LoRA or QLoRA fine-tuning
+    if parameters["type_fine_tune"] in ["lora", "qlora"]:
+        model = PeftModel.from_pretrained(model, model_type_path)
+
+    return model, formatter, parameters
 
 
 def main():
