@@ -111,8 +111,6 @@ class ChatModel:
         best_sequence_idx = normalized_scores.index(max(normalized_scores))
         best_sequence = sequences[best_sequence_idx]
 
-        print(f"DEBUG: {repr(self.tokenizer.decode(best_sequence))}")
-
         return self.formatter.filter_output(
             encoded_prompt["input_ids"].squeeze(0), best_sequence
         )
