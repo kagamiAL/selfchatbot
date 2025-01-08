@@ -47,37 +47,6 @@ def get_specific_layer_names(model: AutoModelForCausalLM) -> list[str]:
     return list(set(layer_names))
 
 
-def printProgressBar(
-    iteration,
-    total,
-    prefix="",
-    suffix="",
-    decimals=1,
-    length=100,
-    fill="█",
-    printEnd="\r",
-):
-    """
-    Call in a loop to create terminal progress bar
-    @params:
-        iteration   - Required  : current iteration (Int)
-        total       - Required  : total iterations (Int)
-        prefix      - Optional  : prefix string (Str)
-        suffix      - Optional  : suffix string (Str)
-        decimals    - Optional  : positive number of decimals in percent complete (Int)
-        length      - Optional  : character length of bar (Int)
-        fill        - Optional  : bar fill character (Str)
-        printEnd    - Optional  : end character (e.g. "\r", "\r\n") (Str)
-    """
-    percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
-    filledLength = int(length * iteration // total)
-    bar = fill * filledLength + "-" * (length - filledLength)
-    print(f"\r{prefix} |{bar}| {percent}% {suffix}", end=printEnd)
-    # Print New Line on Complete
-    if iteration == total:
-        print()
-
-
 def get_params(dataset_path: str) -> dict:
     """Returns the parameters for fine-tuning
 
@@ -173,19 +142,6 @@ def get_lora_config(parameters: dict, base_model: AutoModelForCausalLM) -> LoraC
     )
 
 
-def custom_tokenizer_exists(path: str) -> bool:
-    """Checks if a custom tokenizer exists at the given path
-
-    Args:
-        path (str): The path to the preprocessed dataset
-
-    Returns:
-        bool: True if a custom tokenizer exists, False otherwise
-    """
-
-    return Path(path).joinpath("tokenizer").is_dir()
-
-
 def get_model(parameters: dict, tokenizer: PreTrainedTokenizer) -> AutoModelForCausalLM:
     """Returns the model for fine-tuning
 
@@ -220,26 +176,6 @@ def get_model(parameters: dict, tokenizer: PreTrainedTokenizer) -> AutoModelForC
     if parameters["type_fine_tune"] in ["lora", "qlora"]:
         return get_peft_model(model, get_lora_config(parameters, model))
     return model
-
-
-def save_resized_model(
-    directory_path: str, model_name: str, tokenizer: PreTrainedTokenizer
-):
-    """
-    Save a model with the correct vocabulary size, skip if it already exists
-
-    Args:
-        directory_path (str): The path to the directory to save the model
-        model_name (str): The name of the model to save
-        tokenizer (PreTrainedTokenizer): The tokenizer to use for resizing the model
-    """
-    save_path = osp.join(directory_path, "model")
-    # Check if the directory already exists so we don't create a new one
-    if not Path(save_path).is_dir():
-        Path(save_path).mkdir(exist_ok=True)
-        model: PreTrainedModel = AutoModelForCausalLM.from_pretrained(model_name)
-        model.resize_token_embeddings(len(tokenizer))
-        model.save_pretrained(save_path)
 
 
 def save_results_json_data(save_path: Path, parameters: dict):
