@@ -12,10 +12,9 @@ class DefaultFormatter(Formatter):
     USER_LABEL = "user"
     CHAT_TEMPLATE = (
         "{% if not add_generation_prompt is defined %}{% set add_generation_prompt = false %}{% endif %}"
-        "{% for message in messages %}{{'<|start_header_id|>' + message['role'] + '<|end_header_id|>' + message['content'] + '<|eot_id|>'}}{% endfor %}"
-        "{% if add_generation_prompt %}{{ '<|start_header_id|>assistant<|end_header_id|>' }}{% endif %}"
+        "{% for message in messages %}{{'<|sot_id|>' + message['role'] + ': ' + message['content'] + '<|eot_id|>'}}{% endfor %}"
+        "{% if add_generation_prompt %}{{ '<|sot_id|>assistant: ' }}{% endif %}"
     )
-    SPECIAL_TOKENS = ["<|start_header_id|>", "<|end_header_id|>"]
 
     @override
     def __init__(self, tokenizer):
@@ -24,11 +23,11 @@ class DefaultFormatter(Formatter):
             warn(
                 "There already is a chat template set in the tokenizer, this will be overwritten"
             )
-        if self.tokenizer.eos_token is None:
-            self.tokenizer.eos_token = "<|eot_id|>"
+        eos_token: str = self.tokenizer.eos_token or ""
+        bos_token: str = self.tokenizer.bos_token or ""
         self.tokenizer.chat_template = self.CHAT_TEMPLATE.replace(
-            "<|eot_id|>", self.tokenizer.eos_token
-        )
+            "<|eot_id|>", eos_token
+        ).replace("<|sot_id|>", bos_token)
 
     @override
     def format_block(self, block: list[MessagePacket]) -> str:
